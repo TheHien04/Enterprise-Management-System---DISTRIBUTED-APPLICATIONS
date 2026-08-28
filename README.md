@@ -1,5 +1,7 @@
 # Enterprise Management System — Logistics ABC
 
+[![Repo](https://img.shields.io/badge/GitHub-Enterprise--Management--System-blue)](https://github.com/TheHien04/Enterprise-Management-System)
+
 Distributed business management system for **Logistics ABC Corporation**, built with **FastAPI microservices** + **React/Vite/TypeScript** + **Docker Compose** — developed for the **Distributed Applications (UDPT)** course.
 
 > **New to the repo?** Start at **[docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md)** — find your module in 30 seconds.

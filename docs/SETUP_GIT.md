@@ -1,27 +1,24 @@
 # Git Setup
 
-Git cannot run on this machine until **Xcode Command Line Tools** are installed.
+Repo: **https://github.com/TheHien04/Enterprise-Management-System**
 
-## Step 1 — Install tools (one time)
+## Step 1 — Rename repo on GitHub (one time)
 
-```bash
-xcode-select --install
-```
+GitHub → **Settings** → **General** → Repository name → `Enterprise-Management-System` → **Rename**
 
-Wait for installation to finish, then restart Terminal.
-
-## Step 2 — Push to GitHub (recommended for team)
-
-1. Create an empty repo on GitHub: `udpt-enterprise` (Private)
-2. Run:
+## Step 2 — Push code from your machine
 
 ```bash
 cd "/Users/macbookofjimmy/Documents/Project UDPT"
-chmod +x scripts/setup-git.sh
-./scripts/setup-git.sh github YOUR_GITHUB_USERNAME/udpt-enterprise
+git remote set-url origin https://github.com/TheHien04/Enterprise-Management-System.git
+git push -u origin main
 ```
 
-3. Invite teammates: GitHub → Settings → Collaborators
+If GitHub asks for login, use a **Personal Access Token** (not your account password).
+
+## Step 3 — Invite teammates
+
+GitHub → **Settings** → **Collaborators** → add team members
 
 ## Alternative — Cursor origin
 

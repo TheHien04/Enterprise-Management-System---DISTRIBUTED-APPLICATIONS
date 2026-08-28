@@ -72,6 +72,6 @@ elif [ "$REMOTE_TARGET" = "cursor" ] && [ -n "$REMOTE_NAME" ]; then
 else
   echo ""
   echo "Local git ready. To push:"
-  echo "  ./scripts/setup-git.sh github YOUR_USERNAME/udpt-enterprise"
-  echo "  ./scripts/setup-git.sh cursor udpt-enterprise"
+  echo "  ./scripts/setup-git.sh github TheHien04/Enterprise-Management-System"
+  echo "  ./scripts/setup-git.sh cursor Enterprise-Management-System"
 fi
