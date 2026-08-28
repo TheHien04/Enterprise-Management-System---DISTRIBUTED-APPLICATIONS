@@ -1,0 +1,2 @@
+# Enterprise-Management-System---DISTRIBUTED-APPLICATIONS
+A distributed business management system for Logistics ABC Corporation, built using a microservices architecture (FastAPI + React). It supports the management of customers/contracts, pricing, shipment volumes, payment statements, multi-level approval workflows, notifications, and audit trails—developed for the Distributed Applications course.
