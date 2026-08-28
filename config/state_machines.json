@@ -1,0 +1,78 @@
+{
+  "contract": {
+    "states": ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "ACTIVE", "EXPIRED", "REJECTED", "REVISION_REQUESTED", "CANCELLED"],
+    "transitions": {
+      "DRAFT": ["SUBMITTED", "CANCELLED"],
+      "SUBMITTED": ["UNDER_REVIEW", "CANCELLED"],
+      "UNDER_REVIEW": ["APPROVED", "REJECTED", "REVISION_REQUESTED"],
+      "REVISION_REQUESTED": ["DRAFT"],
+      "APPROVED": ["ACTIVE"],
+      "ACTIVE": ["EXPIRED", "CANCELLED"],
+      "REJECTED": ["DRAFT"]
+    },
+    "editable_states": ["DRAFT", "REVISION_REQUESTED"],
+    "rules": ["CTR-01", "CTR-02", "CTR-03", "CTR-04", "CTR-05", "CTR-06", "CTR-07"]
+  },
+  "appendix": {
+    "states": ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "EFFECTIVE", "REJECTED", "REVISION_REQUESTED"],
+    "transitions": {
+      "DRAFT": ["SUBMITTED"],
+      "SUBMITTED": ["UNDER_REVIEW"],
+      "UNDER_REVIEW": ["APPROVED", "REJECTED", "REVISION_REQUESTED"],
+      "REVISION_REQUESTED": ["DRAFT"],
+      "APPROVED": ["EFFECTIVE"],
+      "REJECTED": ["DRAFT"]
+    },
+    "editable_states": ["DRAFT", "REVISION_REQUESTED"],
+    "rules": ["APP-01", "APP-02", "APP-03", "APP-04"]
+  },
+  "price_list": {
+    "states": ["DRAFT", "SUBMITTED", "APPROVED", "EFFECTIVE", "SUPERSEDED", "EXPIRED", "REJECTED"],
+    "transitions": {
+      "DRAFT": ["SUBMITTED"],
+      "SUBMITTED": ["APPROVED", "REJECTED"],
+      "REJECTED": ["DRAFT"],
+      "APPROVED": ["EFFECTIVE"],
+      "EFFECTIVE": ["SUPERSEDED", "EXPIRED"]
+    },
+    "editable_states": ["DRAFT", "REJECTED"],
+    "rules": ["PRC-01", "PRC-02", "PRC-03", "PRC-04", "PRC-05", "PRC-06"]
+  },
+  "volume_period": {
+    "states": ["OPEN", "RECONCILED", "LOCKED"],
+    "transitions": {
+      "OPEN": ["RECONCILED"],
+      "RECONCILED": ["LOCKED"]
+    },
+    "rules": ["VOL-01", "VOL-02", "VOL-03", "VOL-04"]
+  },
+  "billing_sheet": {
+    "approval_status": {
+      "states": ["DRAFT", "CALCULATED", "RECONCILED", "SUBMITTED", "APPROVED", "REJECTED", "REVISION_REQUESTED"],
+      "transitions": {
+        "DRAFT": ["CALCULATED"],
+        "CALCULATED": ["RECONCILED"],
+        "RECONCILED": ["SUBMITTED"],
+        "SUBMITTED": ["APPROVED", "REJECTED", "REVISION_REQUESTED"],
+        "REVISION_REQUESTED": ["RECONCILED"]
+      }
+    },
+    "signing_status": {
+      "states": ["NONE", "PENDING_SEND", "SIGNING", "SIGNED", "FAILED", "CANCELLED"],
+      "transitions": {
+        "NONE": ["PENDING_SEND"],
+        "PENDING_SEND": ["SIGNING"],
+        "SIGNING": ["SIGNED", "FAILED", "CANCELLED"],
+        "FAILED": ["PENDING_SEND"],
+        "CANCELLED": ["PENDING_SEND"]
+      }
+    },
+    "issuance_status": {
+      "states": ["DRAFT", "ISSUED"],
+      "transitions": {
+        "DRAFT": ["ISSUED"]
+      }
+    },
+    "rules": ["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-06", "PAY-07"]
+  }
+}

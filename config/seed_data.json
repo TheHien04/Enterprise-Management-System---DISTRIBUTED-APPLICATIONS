@@ -1,0 +1,104 @@
+{
+  "users": [
+    { "username": "sale01", "role": "SALES_STAFF", "department": "Kinh doanh", "full_name": "Sales Staff 01" },
+    { "username": "manager01", "role": "SALES_MANAGER", "department": "Kinh doanh", "full_name": "Sales Manager 01" },
+    { "username": "legal01", "role": "LEGAL", "department": "Phap che", "full_name": "Legal Staff 01" },
+    { "username": "account01", "role": "ACCOUNTING", "department": "Ke toan", "full_name": "Accountant 01" },
+    { "username": "director01", "role": "DIRECTOR", "department": "Ban Giam doc", "full_name": "Director 01" },
+    { "username": "admin01", "role": "ADMIN", "department": "Quan tri", "full_name": "System Admin" }
+  ],
+  "customers": [
+    { "code": "KH0001", "name": "Samsung Electronics HCMC", "tax_code": "0312345678", "type": "Logistics", "status": "ACTIVE" },
+    { "code": "KH0002", "name": "Vinamilk", "tax_code": "0300588569", "type": "FMCG", "status": "ACTIVE" },
+    { "code": "KH0003", "name": "Thaco Logistics", "tax_code": "4000123456", "type": "Logistics", "status": "ACTIVE" },
+    { "code": "KH0004", "name": "Nestle Viet Nam", "tax_code": "0302012345", "type": "FMCG", "status": "ACTIVE" },
+    { "code": "KH0005", "name": "Intel Products Vietnam", "tax_code": "0309876543", "type": "Manufacturing", "status": "ACTIVE" }
+  ],
+  "services": [
+    { "code": "DV001", "name": "Boc xep Container 20ft", "unit": "Container" },
+    { "code": "DV002", "name": "Boc xep Container 40ft", "unit": "Container" },
+    { "code": "DV003", "name": "Luu kho", "unit": "Ngay" },
+    { "code": "DV004", "name": "Van chuyen noi dia", "unit": "Chuyen" },
+    { "code": "DV005", "name": "Kiem dem hang hoa", "unit": "Lo hang" },
+    { "code": "DV006", "name": "Nang ha Container", "unit": "Lan" }
+  ],
+  "contracts": [
+    { "code": "HD2026001", "customer_code": "KH0001", "effective_from": "2026-07-01", "effective_to": "2026-12-31", "total_value": 12000000000 },
+    { "code": "HD2026002", "customer_code": "KH0002", "effective_from": "2026-08-01", "effective_to": "2027-07-31", "total_value": 8000000000 },
+    { "code": "HD2026003", "customer_code": "KH0005", "effective_from": "2026-07-01", "effective_to": "2027-06-30", "total_value": 25000000000 }
+  ],
+  "appendix": {
+    "contract_code": "HD2026001",
+    "field_name": "warehouse_unit_price",
+    "before_value": 120000,
+    "after_value": 150000,
+    "effective_date": "2026-10-01"
+  },
+  "price_lists": {
+    "v1": {
+      "contract_code": "HD2026001",
+      "version": "v1",
+      "effective_from": "2026-07-01",
+      "effective_to": "2026-09-30",
+      "items": [
+        { "service_code": "DV001", "unit_price": 350000 },
+        { "service_code": "DV002", "unit_price": 550000 },
+        { "service_code": "DV003", "unit_price": 120000 },
+        { "service_code": "DV004", "unit_price": 2500000 }
+      ]
+    },
+    "v2": {
+      "contract_code": "HD2026001",
+      "version": "v2",
+      "effective_from": "2026-10-01",
+      "effective_to": "2026-12-31",
+      "items": [
+        { "service_code": "DV001", "unit_price": 350000 },
+        { "service_code": "DV002", "unit_price": 550000 },
+        { "service_code": "DV003", "unit_price": 150000 },
+        { "service_code": "DV004", "unit_price": 2500000 }
+      ]
+    }
+  },
+  "contract_service_prices": [
+    { "contract_code": "HD2026001", "service_code": "DV005", "unit_price": 80000, "note": "Gia kiem dem khai bao trong hop dong, khong co trong bang gia chinh A.5/A.6" }
+  ],
+  "volumes_aug_2026": {
+    "contract_code": "HD2026001",
+    "period": "2026-08",
+    "records": [
+      { "date": "2026-08-02", "service_code": "DV001", "quantity": 12 },
+      { "date": "2026-08-05", "service_code": "DV001", "quantity": 8 },
+      { "date": "2026-08-07", "service_code": "DV002", "quantity": 10 },
+      { "date": "2026-08-09", "service_code": "DV003", "quantity": 95 },
+      { "date": "2026-08-18", "service_code": "DV003", "quantity": 80 },
+      { "date": "2026-08-20", "service_code": "DV004", "quantity": 6 },
+      { "date": "2026-08-28", "service_code": "DV005", "quantity": 25 }
+    ]
+  },
+  "billing_aug_2026": {
+    "contract_code": "HD2026001",
+    "period": "2026-08",
+    "tax_rate": 0,
+    "items": [
+      { "service_code": "DV001", "quantity": 20, "unit_price": 350000, "amount": 7000000 },
+      { "service_code": "DV002", "quantity": 10, "unit_price": 550000, "amount": 5500000 },
+      { "service_code": "DV003", "quantity": 175, "unit_price": 120000, "amount": 21000000 },
+      { "service_code": "DV004", "quantity": 6, "unit_price": 2500000, "amount": 15000000 },
+      { "service_code": "DV005", "quantity": 25, "unit_price": 80000, "amount": 2000000 }
+    ],
+    "total_before_tax": 50500000
+  },
+  "test_scenarios": [
+    { "id": "SC-01", "rule": "CTR-02", "action": "Submit contract without attachment", "expected": "HTTP 422" },
+    { "id": "SC-02", "rule": "PRC-03", "action": "Create overlapping price list", "expected": "HTTP 409" },
+    { "id": "SC-03", "rule": "PAY-01", "action": "Create billing for expired contract", "expected": "HTTP 422" },
+    { "id": "SC-04", "rule": "PAY-03", "action": "Update price list after billing issued", "expected": "snapshot_unit_price unchanged" },
+    { "id": "SC-05", "rule": "Race condition", "action": "Concurrent approve same step", "expected": "1 success, 1 HTTP 409" },
+    { "id": "SC-06", "rule": "PAY-07", "action": "E-sign callback FAILED", "expected": "signing_status=FAILED, retry allowed" },
+    { "id": "SC-07", "rule": "APR-07", "action": "Notification service down during submit", "expected": "Business OK, events retained in Kafka" },
+    { "id": "SC-08", "rule": "APR-01", "action": "Wrong assignee approves", "expected": "HTTP 403" },
+    { "id": "SC-09", "rule": "Double submit", "action": "Submit twice with same idempotency key", "expected": "1 workflow instance" },
+    { "id": "SC-10", "rule": "APP-02", "action": "Bill Sep/2026 with appendix effective Oct/2026", "expected": "Uses old price 120000 for warehouse" }
+  ]
+}

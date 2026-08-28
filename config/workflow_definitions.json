@@ -1,0 +1,40 @@
+[
+  {
+    "document_type": "CONTRACT",
+    "name": "Standard Contract Approval Flow",
+    "description": "Per Data Sample A.9: Sales → Sales Manager → Legal → Accounting → Director",
+    "steps": [
+      { "step_num": 1, "step_name": "Sales Staff Review", "assignee_role": "SALES_STAFF", "required": true },
+      { "step_num": 2, "step_name": "Sales Manager Approval", "assignee_role": "SALES_MANAGER", "required": true },
+      { "step_num": 3, "step_name": "Legal Review", "assignee_role": "LEGAL", "required": true },
+      { "step_num": 4, "step_name": "Accounting Review", "assignee_role": "ACCOUNTING", "required": true },
+      { "step_num": 5, "step_name": "Director Approval", "assignee_role": "DIRECTOR", "required": true }
+    ]
+  },
+  {
+    "document_type": "APPENDIX",
+    "name": "Contract Appendix Approval Flow",
+    "description": "Same as contract or configurable separately",
+    "steps": [
+      { "step_num": 1, "step_name": "Sales Manager Approval", "assignee_role": "SALES_MANAGER", "required": true },
+      { "step_num": 2, "step_name": "Legal Review", "assignee_role": "LEGAL", "required": true },
+      { "step_num": 3, "step_name": "Director Approval", "assignee_role": "DIRECTOR", "required": true }
+    ]
+  },
+  {
+    "document_type": "PRICE_LIST",
+    "name": "Price List Approval Flow",
+    "steps": [
+      { "step_num": 1, "step_name": "Sales Manager Approval", "assignee_role": "SALES_MANAGER", "required": true },
+      { "step_num": 2, "step_name": "Director Approval", "assignee_role": "DIRECTOR", "required": true }
+    ]
+  },
+  {
+    "document_type": "BILLING_SHEET",
+    "name": "Billing Sheet Approval Flow",
+    "steps": [
+      { "step_num": 1, "step_name": "Accounting Review", "assignee_role": "ACCOUNTING", "required": true },
+      { "step_num": 2, "step_name": "Director Approval", "assignee_role": "DIRECTOR", "required": true }
+    ]
+  }
+]

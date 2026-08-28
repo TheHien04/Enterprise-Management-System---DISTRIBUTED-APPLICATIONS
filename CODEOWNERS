@@ -1,0 +1,26 @@
+# CODEOWNERS — default reviewers per area
+# Update GitHub usernames when team joins the repo
+
+# Platform & gateway
+/backend/gateway/                    @team-lead
+/backend/libs/udpt_common/           @team-lead
+/docker-compose.yml                  @team-lead
+/infra/                              @team-lead
+/Makefile                            @team-lead
+
+# Domain services — assign one owner per service
+/backend/services/contract-service/  @member-contract
+/backend/services/pricing-service/   @member-pricing
+/backend/services/operation-service/ @member-operations
+/backend/services/billing-service/   @member-billing
+/backend/services/workflow-service/  @member-workflow
+/backend/services/notification-service/ @member-platform
+/backend/services/audit-service/     @member-platform
+/backend/services/esign-service/     @member-platform
+
+# Frontend
+/frontend/                           @member-frontend
+
+# Shared config & docs
+/config/                             @team-lead
+/docs/                               @team-lead
