@@ -15,6 +15,16 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"
+    workflow_service_url: str = "http://workflow-service:8005"
+    config_dir: str = "/config"
+    pricing_service_url: str = "http://pricing-service:8002"
+    billing_service_url: str = "http://billing-service:8004"
+    minio_endpoint: str = "minio:9000"
+    minio_access_key: str = "udpt_minio"
+    minio_secret_key: str = "udpt_minio_secret"
+    minio_bucket: str = "contracts"
+    minio_secure: bool = False
+    audit_service_url: str = "http://audit-service:8007"
 
 
 settings = Settings()

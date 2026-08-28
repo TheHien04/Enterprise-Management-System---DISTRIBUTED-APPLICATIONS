@@ -13,6 +13,7 @@ DEMO_USERS = {
     "legal01": {"password": "legal01", "roles": ["LEGAL"], "name": "Legal 01"},
     "account01": {"password": "account01", "roles": ["ACCOUNTING"], "name": "Accountant 01"},
     "director01": {"password": "director01", "roles": ["DIRECTOR"], "name": "Director 01"},
+    "ops01": {"password": "ops01", "roles": ["OPERATIONS"], "name": "Operations Staff 01"},
     "admin01": {"password": "admin01", "roles": ["ADMIN"], "name": "System Admin"},
 }
 

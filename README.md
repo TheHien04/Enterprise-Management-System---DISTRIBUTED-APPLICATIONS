@@ -67,6 +67,9 @@ make up
 |------|----------|------|
 | sale01 | sale01 | Sales Staff |
 | manager01 | manager01 | Sales Manager |
+| legal01 | legal01 | Legal |
+| ops01 | ops01 | Operations (Khai thác) |
+| account01 | account01 | Accounting |
 | director01 | director01 | Director |
 | admin01 | admin01 | Admin |
 

@@ -5,7 +5,7 @@ import { login as loginRequest } from '@/api/auth'
 interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string) => Promise<AuthUser>
   logout: () => void
   hasRole: (...roles: UserRole[]) => boolean
 }
@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser))
       setUser(nextUser)
+      return nextUser
     },
     logout: () => {
       localStorage.removeItem('access_token')

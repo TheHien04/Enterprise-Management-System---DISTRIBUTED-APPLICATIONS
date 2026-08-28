@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contract-service
+  namespace: udpt
+  labels:
+    app: contract-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: contract-service
+  template:
+    metadata:
+      labels:
+        app: contract-service
+    spec:
+      containers:
+        - name: contract-service
+          image: udpt-contract-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          env:
+            - name: CONFIG_DIR
+              value: /config
+            - name: DATABASE_URL
+              value: postgresql+psycopg://udpt:udpt_secret@postgres:5432/contract_db
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: WORKFLOW_SERVICE_URL
+              value: http://workflow-service:8005
+          volumeMounts:
+            - name: app-config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: app-config
+          configMap:
+            name: udpt-app-config

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow-service
+  namespace: udpt
+  labels:
+    app: workflow-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflow-service
+  template:
+    metadata:
+      labels:
+        app: workflow-service
+    spec:
+      containers:
+        - name: workflow-service
+          image: udpt-workflow-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8005
+          env:
+            - name: CONFIG_DIR
+              value: /config
+            - name: DATABASE_URL
+              value: postgresql+psycopg://udpt:udpt_secret@postgres:5432/workflow_db
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: CONTRACT_SERVICE_URL
+              value: http://contract-service:8001
+            - name: PRICING_SERVICE_URL
+              value: http://pricing-service:8002
+            - name: BILLING_SERVICE_URL
+              value: http://billing-service:8004
+          volumeMounts:
+            - name: app-config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: app-config
+          configMap:
+            name: udpt-app-config

@@ -5,6 +5,7 @@
     { "username": "legal01", "role": "LEGAL", "department": "Phap che", "full_name": "Legal Staff 01" },
     { "username": "account01", "role": "ACCOUNTING", "department": "Ke toan", "full_name": "Accountant 01" },
     { "username": "director01", "role": "DIRECTOR", "department": "Ban Giam doc", "full_name": "Director 01" },
+    { "username": "ops01", "role": "OPERATIONS", "department": "Khai thac", "full_name": "Operations Staff 01" },
     { "username": "admin01", "role": "ADMIN", "department": "Quan tri", "full_name": "System Admin" }
   ],
   "customers": [
@@ -74,6 +75,17 @@
       { "date": "2026-08-18", "service_code": "DV003", "quantity": 80 },
       { "date": "2026-08-20", "service_code": "DV004", "quantity": 6 },
       { "date": "2026-08-28", "service_code": "DV005", "quantity": 25 }
+    ]
+  },
+  "volumes_sep_2026": {
+    "contract_code": "HD2026001",
+    "period": "2026-09",
+    "records": [
+      { "date": "2026-09-03", "service_code": "DV001", "quantity": 10 },
+      { "date": "2026-09-10", "service_code": "DV002", "quantity": 8 },
+      { "date": "2026-09-12", "service_code": "DV003", "quantity": 120 },
+      { "date": "2026-09-20", "service_code": "DV004", "quantity": 5 },
+      { "date": "2026-09-25", "service_code": "DV005", "quantity": 18 }
     ]
   },
   "billing_aug_2026": {

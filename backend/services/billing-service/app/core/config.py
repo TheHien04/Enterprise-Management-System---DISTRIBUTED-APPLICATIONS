@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"
+    pricing_service_url: str = "http://pricing-service:8002"
+    operation_service_url: str = "http://operation-service:8003"
+    contract_service_url: str = "http://contract-service:8001"
+    esign_service_url: str = "http://esign-service:8008"
+    workflow_service_url: str = "http://workflow-service:8005"
+    audit_service_url: str = "http://audit-service:8007"
 
 
 settings = Settings()

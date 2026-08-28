@@ -46,8 +46,9 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     healthcheck:
@@ -91,9 +92,21 @@ services:
       - "8001:8001"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-udpt_minio}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-udpt_minio_secret}
+      MINIO_BUCKET: contracts
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
+      workflow-service:
+        condition: service_started
+      minio:
+        condition: service_started
 
   pricing-service:
     build:
@@ -104,6 +117,10 @@ services:
       - "8002:8002"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,6 +134,10 @@ services:
       - "8003:8003"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,9 +151,17 @@ services:
       - "8004:8004"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
+      pricing-service:
+        condition: service_started
+      operation-service:
+        condition: service_started
 
   workflow-service:
     build:
@@ -143,6 +172,10 @@ services:
       - "8005:8005"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -156,6 +189,10 @@ services:
       - "8006:8006"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,6 +208,10 @@ services:
       - "8007:8007"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -186,6 +227,10 @@ services:
       - "8008:8008"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esign-service
+  namespace: udpt
+  labels:
+    app: esign-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: esign-service
+  template:
+    metadata:
+      labels:
+        app: esign-service
+    spec:
+      containers:
+        - name: esign-service
+          image: udpt-esign-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8008
+          env:
+            - name: CONFIG_DIR
+              value: /config
+            - name: DATABASE_URL
+              value: postgresql+psycopg://udpt:udpt_secret@postgres:5432/support_db
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: BILLING_SERVICE_URL
+              value: http://billing-service:8004
+          volumeMounts:
+            - name: app-config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8008
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8008
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: app-config
+          configMap:
+            name: udpt-app-config

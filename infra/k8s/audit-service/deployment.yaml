@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: udpt
+  labels:
+    app: audit-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+    spec:
+      containers:
+        - name: audit-service
+          image: udpt-audit-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8007
+          env:
+            - name: CONFIG_DIR
+              value: /config
+            - name: DATABASE_URL
+              value: postgresql+psycopg://udpt:udpt_secret@postgres:5432/support_db
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+          volumeMounts:
+            - name: app-config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8007
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8007
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: app-config
+          configMap:
+            name: udpt-app-config

@@ -1,14 +1,15 @@
-from typing import Annotated
+import json
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+import redis.asyncio as redis
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from udpt_common.auth import decode_access_token
 from udpt_common.exceptions import AppError
 
-from app.api import auth, health
+from app.api import admin, auth, health
 from app.core.config import settings
+from app.core.deps import get_current_user
 
 app = FastAPI(
     title=settings.app_name,
@@ -37,15 +38,27 @@ SERVICE_MAP: dict[str, tuple[str, str]] = {
     "esign": (settings.esign_service_url, ""),
 }
 
+# Gateway RBAC — mirrors frontend route permissions (§6 security)
+SERVICE_ROLE_REQUIREMENTS: dict[str, list[str] | None] = {
+    "customers": ["SALES_STAFF", "SALES_MANAGER", "ADMIN"],
+    "contracts": ["SALES_STAFF", "SALES_MANAGER", "LEGAL", "DIRECTOR", "ADMIN"],
+    "pricing": ["SALES_STAFF", "SALES_MANAGER", "DIRECTOR", "ADMIN"],
+    "operations": ["OPERATIONS", "DIRECTOR", "ADMIN"],
+    "billing": ["ACCOUNTING", "DIRECTOR", "ADMIN"],
+    "esign": ["ACCOUNTING", "DIRECTOR", "ADMIN"],
+    "workflows": None,
+    "notifications": None,
+    "audit": ["DIRECTOR", "ADMIN"],
+}
 
-def get_current_user(authorization: Annotated[str | None, Header()] = None) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
-    token = authorization.removeprefix("Bearer ").strip()
-    try:
-        return decode_access_token(token, secret=settings.jwt_secret, algorithm=settings.jwt_algorithm)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+_redis: redis.Redis | None = None
+
+
+async def get_redis() -> redis.Redis:
+    global _redis
+    if _redis is None:
+        _redis = redis.from_url(settings.redis_url, decode_responses=True)
+    return _redis
 
 
 @app.exception_handler(AppError)
@@ -61,6 +74,7 @@ async def app_error_handler(_: Request, exc: AppError):
 
 app.include_router(health.router, tags=["Health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(admin.router, prefix="/api/v1", tags=["Admin"])
 
 
 @app.api_route("/api/v1/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -73,17 +87,35 @@ async def proxy_request(
     if service not in SERVICE_MAP:
         raise HTTPException(status_code=404, detail=f"Unknown service: {service}")
 
+    required_roles = SERVICE_ROLE_REQUIREMENTS.get(service)
+    if required_roles is not None:
+        user_roles = user.get("roles") or []
+        if not any(role in required_roles for role in user_roles):
+            raise HTTPException(status_code=403, detail="Insufficient role for this resource")
+
+    idempotency_key = request.headers.get("X-Idempotency-Key")
+    if idempotency_key and request.method in {"POST", "PUT", "PATCH"}:
+        r = await get_redis()
+        cache_key = f"idempotency:{user.get('sub')}:{service}:{path}:{idempotency_key}"
+        cached = await r.get(cache_key)
+        if cached:
+            payload = json.loads(cached)
+            return JSONResponse(status_code=payload["status"], content=payload["body"])
+
     base_url, prefix = SERVICE_MAP[service]
     if prefix:
         target_url = f"{base_url}/api/v1/{prefix}" + (f"/{path}" if path else "")
     else:
-        target_url = f"{base_url}/api/v1/{path}"
+        target_url = f"{base_url}/api/v1/{path}" if path else f"{base_url}/api/v1"
+
     headers = {
         "X-User-Id": str(user.get("sub", "")),
         "X-User-Roles": ",".join(user.get("roles", [])),
     }
-    if request.headers.get("X-Idempotency-Key"):
-        headers["X-Idempotency-Key"] = request.headers["X-Idempotency-Key"]
+    if request.headers.get("content-type"):
+        headers["Content-Type"] = request.headers["content-type"]
+    if idempotency_key:
+        headers["X-Idempotency-Key"] = idempotency_key
 
     body = await request.body()
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -94,6 +126,15 @@ async def proxy_request(
             content=body,
             headers=headers,
         )
+
+    if idempotency_key and request.method in {"POST", "PUT", "PATCH"} and response.status_code < 500:
+        try:
+            body_json = response.json()
+        except Exception:
+            body_json = {"raw": response.text}
+        r = await get_redis()
+        cache_key = f"idempotency:{user.get('sub')}:{service}:{path}:{idempotency_key}"
+        await r.setex(cache_key, 86400, json.dumps({"status": response.status_code, "body": body_json}))
 
     return Response(
         content=response.content,

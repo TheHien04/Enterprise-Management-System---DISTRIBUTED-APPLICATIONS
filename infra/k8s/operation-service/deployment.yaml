@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operation-service
+  namespace: udpt
+  labels:
+    app: operation-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: operation-service
+  template:
+    metadata:
+      labels:
+        app: operation-service
+    spec:
+      containers:
+        - name: operation-service
+          image: udpt-operation-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8003
+          env:
+            - name: CONFIG_DIR
+              value: /config
+            - name: DATABASE_URL
+              value: postgresql+psycopg://udpt:udpt_secret@postgres:5432/operation_db
+          volumeMounts:
+            - name: app-config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: app-config
+          configMap:
+            name: udpt-app-config

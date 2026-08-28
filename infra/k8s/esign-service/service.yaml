@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: esign-service
+  namespace: udpt
+spec:
+  selector:
+    app: esign-service
+  ports:
+    - port: 8008
+      targetPort: 8008
