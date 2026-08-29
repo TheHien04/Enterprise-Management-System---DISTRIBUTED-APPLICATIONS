@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { customersApi } from '@/api/modules'
 import { useAsync } from '@/hooks/useAsync'
@@ -7,6 +8,7 @@ import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import { Icons } from '@/components/ui/icons'
 import { formatNumber } from '@/i18n/helpers'
 import { interpolate } from '@/i18n/messages'
+import { trackRecentEntity } from '@/lib/recentEntities'
 import type { Contract } from '@/types/domain'
 
 export default function CustomerDetailPage() {
@@ -15,6 +17,18 @@ export default function CustomerDetailPage() {
   const { t, locale } = useLocale()
 
   const overview = useAsync(async () => (await customersApi.overview(id!)).data, [id])
+
+  useEffect(() => {
+    const customer = overview.data?.customer
+    if (!customer) return
+    trackRecentEntity({
+      id: customer.id,
+      type: 'customer',
+      label: `${customer.code} — ${customer.name}`,
+      hint: customer.status,
+      to: `/customers/${customer.id}`,
+    })
+  }, [overview.data])
 
   const contractColumns: DataTableColumn<Contract>[] = [
     {

@@ -21,7 +21,9 @@ class PeriodService:
 
     async def create_period(self, payload: PeriodCreate):
         if await self.repo.get_by_period(payload.period):
-            raise ConflictError(f"Period already exists: {payload.period}")
+            raise ConflictError(
+                f"Period {payload.period} already exists — select it from the list below instead of creating again"
+            )
         period = BillingPeriod(period=payload.period, status="OPEN")
         return await self.repo.add(period)
 
@@ -75,6 +77,30 @@ class VolumeService:
                 "service_code": record.service_code,
                 "quantity": float(record.quantity),
             },
+            audit_service_url=settings.audit_service_url,
+        )
+        return record
+
+    async def update_volume(self, volume_id, payload):
+        from uuid import UUID
+
+        record = await self.volume_repo.get_by_id(UUID(str(volume_id)))
+        if not record:
+            raise NotFoundError("Volume record not found")
+        billing_period = await self.period_repo.get_by_period(record.period)
+        if not billing_period or billing_period.status == "LOCKED":
+            raise ValidationError("Cannot adjust volumes after period is locked (UC-05)")
+        if billing_period.status not in {"OPEN", "RECONCILED"}:
+            raise ValidationError("Period is not open for volume adjustments")
+        before_qty = float(record.quantity)
+        record.quantity = payload.quantity
+        await log_audit(
+            entity_type="VOLUME",
+            entity_id=str(record.id),
+            action="UPDATE",
+            actor_id="system",
+            before_state={"quantity": before_qty},
+            after_state={"quantity": float(record.quantity)},
             audit_service_url=settings.audit_service_url,
         )
         return record

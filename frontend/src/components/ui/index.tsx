@@ -10,6 +10,11 @@ const STATUS_MAP: Record<string, BadgeVariant> = {
   PUBLISHED: 'success',
   SIGNED: 'success',
   COMPLETED: 'success',
+  EFFECTIVE: 'success',
+  ISSUED: 'success',
+  OPEN: 'info',
+  LOCKED: 'neutral',
+  RECONCILED: 'success',
   DRAFT: 'neutral',
   IN_PROGRESS: 'info',
   UNDER_REVIEW: 'info',
@@ -44,9 +49,11 @@ export function PageHeader({
 }) {
   return (
     <div className="page-header">
-      {eyebrow && <p className="page-eyebrow">{eyebrow}</p>}
-      <h1 className="page-title">{title}</h1>
-      {subtitle && <p className="page-subtitle">{subtitle}</p>}
+      <div className="page-header-copy">
+        {eyebrow && <p className="page-eyebrow">{eyebrow}</p>}
+        <h1 className="page-title">{title}</h1>
+        {subtitle && <p className="page-subtitle">{subtitle}</p>}
+      </div>
       {actions && <div className="page-actions">{actions}</div>}
     </div>
   )
@@ -77,16 +84,19 @@ export function EmptyState({
   title,
   description,
   icon,
+  action,
 }: {
   title: string
   description?: string
   icon?: ReactNode
+  action?: ReactNode
 }) {
   return (
     <div className="empty-state">
       {icon && <div className="empty-state-icon">{icon}</div>}
       <p className="empty-state-title">{title}</p>
       {description && <p className="empty-state-text">{description}</p>}
+      {action && <div className="empty-state-action">{action}</div>}
     </div>
   )
 }

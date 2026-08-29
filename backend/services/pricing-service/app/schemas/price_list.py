@@ -25,6 +25,13 @@ class PriceListCreate(BaseModel):
     items: list[PriceListItemCreate] = Field(min_length=1)
 
 
+class PriceListUpdate(BaseModel):
+    version: str | None = None
+    effective_from: date | None = None
+    effective_to: date | None = None
+    items: list[PriceListItemCreate] | None = None
+
+
 class PriceListOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

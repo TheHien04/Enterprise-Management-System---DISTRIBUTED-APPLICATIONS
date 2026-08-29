@@ -67,6 +67,8 @@ class ContractOut(BaseModel):
     id: UUID
     code: str
     customer_id: UUID
+    customer_code: str | None = None
+    customer_name: str | None = None
     title: str
     effective_from: date
     effective_to: date

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,8 +24,11 @@ class WorkflowOut(BaseModel):
     status: str
     current_step_num: int
     current_assignee_role: str | None
+    current_assignee_user_id: str | None = None
     submitted_by: str
     version: int = 1
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class WorkflowProgress(BaseModel):

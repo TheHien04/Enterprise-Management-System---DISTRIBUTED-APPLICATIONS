@@ -41,3 +41,6 @@ class VolumeRepository:
         self.session.add(record)
         await self.session.flush()
         return record
+
+    async def get_by_id(self, volume_id) -> VolumeRecord | None:
+        return await self.session.get(VolumeRecord, volume_id)

@@ -9,6 +9,7 @@ router = APIRouter()
 # Demo users — replace with DB lookup in production
 DEMO_USERS = {
     "sale01": {"password": "sale01", "roles": ["SALES_STAFF"], "name": "Sales Staff 01"},
+    "sale02": {"password": "sale02", "roles": ["SALES_STAFF"], "name": "Sales Staff 02"},
     "manager01": {"password": "manager01", "roles": ["SALES_MANAGER"], "name": "Sales Manager 01"},
     "legal01": {"password": "legal01", "roles": ["LEGAL"], "name": "Legal 01"},
     "account01": {"password": "account01", "roles": ["ACCOUNTING"], "name": "Accountant 01"},

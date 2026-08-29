@@ -1,110 +1,344 @@
 # Enterprise Management System — Logistics ABC
 
-[![Repo](https://img.shields.io/badge/GitHub-Enterprise--Management--System-blue)](https://github.com/TheHien04/Enterprise-Management-System)
+[![Course](https://img.shields.io/badge/Course-UDPT-blue)](docs/QTKD_DATH.pdf)
+[![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20Kafka-0ea5e9)](docs/ARCHITECTURE.md)
+[![Tests](https://img.shields.io/badge/Tests-SC--01%E2%80%93SC--10-success)](backend/tests/integration/test_scenarios.py)
+[![License](https://img.shields.io/badge/License-Academic-lightgrey)](#)
 
-Distributed business management system for **Logistics ABC Corporation**, built with **FastAPI microservices** + **React/Vite/TypeScript** + **Docker Compose** — developed for the **Distributed Applications (UDPT)** course.
+Hệ thống quản trị kinh doanh phân tán cho **Logistics ABC Corporation** — môn **Ứng dụng phân tán (UDPT)**.
 
-> **New to the repo?** Start at **[docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md)** — find your module in 30 seconds.
+Monorepo gồm **8 microservices FastAPI**, **API Gateway**, **React/Vite frontend**, **PostgreSQL**, **Redis**, **Kafka**, **MinIO** — triển khai local bằng Docker Compose, sẵn sàng mở rộng lên Kubernetes.
 
-## Team
+> **Mới vào repo?** Đọc [docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md) → tìm đúng folder module của bạn trong 30 giây.
 
-- Nguyen The Hien — 22127107
-- Le Quang Tan — 22127378
-- Bui Le Khoi — 22127205
-- Nguyen Minh Hieu — 21127742
+**Repository:** [TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS](https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS)
 
-## Architecture
+---
+
+## Mục lục
+
+- [Tính năng](#tính-năng)
+- [Kiến trúc](#kiến-trúc)
+- [Team & phân công module](#team--phân-công-module)
+- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+- [Quick Start](#quick-start)
+- [Tài khoản demo & phân quyền](#tài-khoản-demo--phân-quyền)
+- [Quy trình làm việc (Git)](#quy-trình-làm-việc-git)
+- [Testing](#testing)
+- [Tài liệu tham khảo](#tài-liệu-tham-khảo)
+
+---
+
+## Tính năng
+
+| UC | Mô tả | Trạng thái |
+|----|--------|------------|
+| UC-01 | Quản lý khách hàng | ✅ |
+| UC-02 | Vòng đời hợp đồng + phê duyệt 5 bước | ✅ |
+| UC-03 | Phụ lục hợp đồng | ✅ |
+| UC-04 | Bảng giá (overlap + supersede + edit Rejected) | ✅ |
+| UC-05 | Sản lượng & khóa kỳ (+ chỉnh trước khóa) | ✅ |
+| UC-06 | Bảng kê thanh toán + điều chỉnh + snapshot giá | ✅ |
+| UC-07 | Workflow engine JSON + assignee theo user (APR-01) | ✅ |
+| UC-08 | Ký số điện tử (async callback + retry) | ✅ |
+| UC-09 | Thông báo Kafka + cảnh báo hết hạn | ✅ |
+| UC-10 | Audit log + outbox + idempotency + rate limit | ✅ |
+
+Frontend: UI enterprise (light/dark), i18n VI/EN, **RBAC theo 6 phòng ban**, wizard billing, so sánh bảng giá, dashboard expiry, approvals với comment bắt buộc.
+
+---
+
+## Kiến trúc
 
 ```
-frontend (5173) → api-gateway (8080) → microservices (8001–8008)
-                                      ↘ postgres / redis / kafka / minio
+┌──────────────┐     HTTP      ┌─────────────┐
+│   Frontend   │ ────────────► │ API Gateway │  :8080  JWT + RBAC + Idempotency
+│  React/Vite  │               └──────┬──────┘
+│    :5173     │                      │
+└──────────────┘        ┌─────────────┼─────────────┐
+                        ▼             ▼             ▼
+                  Contract:8001  Workflow:8005  Billing:8004
+                  Pricing:8002   Notify:8006    Operation:8003
+                                 Audit:8007     E-Sign:8008
+                        │             │             │
+                        └────── PostgreSQL ─ Redis ─ Kafka ─ MinIO
+                              (database-per-service)
 ```
 
-| Service | Port | Database | Responsibility |
-|---------|------|----------|----------------|
-| API Gateway | 8080 | — | JWT, routing, idempotency |
-| Contract | 8001 | contract_db | Customers, contracts, appendices |
-| Pricing | 8002 | pricing_db | Service catalog, price lists |
-| Operation | 8003 | operation_db | Volumes, period locking |
-| Billing | 8004 | billing_db | Billing sheets, snapshots |
-| Workflow | 8005 | workflow_db | Approval engine |
-| Notification | 8006 | support_db | Async notifications |
-| Audit | 8007 | support_db | Audit logs |
-| E-Sign | 8008 | support_db | Digital signing |
+| Service | Port | Database | Trách nhiệm |
+|---------|------|----------|-------------|
+| **API Gateway** | 8080 | — | JWT, routing, RBAC, idempotency (Redis) |
+| **Contract** | 8001 | `contract_db` | Khách hàng, HĐ, phụ lục, attachment (MinIO) |
+| **Pricing** | 8002 | `pricing_db` | Catalog dịch vụ, bảng giá |
+| **Operation** | 8003 | `operation_db` | Sản lượng, khóa kỳ |
+| **Billing** | 8004 | `billing_db` | Bảng kê, điều chỉnh, snapshot giá |
+| **Workflow** | 8005 | `workflow_db` | Engine phê duyệt đa cấp |
+| **Notification** | 8006 | `support_db` | Thông báo async (Kafka) |
+| **Audit** | 8007 | `support_db` | Nhật ký bất biến (Kafka) |
+| **E-Sign** | 8008 | `support_db` | Phiên ký số |
+
+Chi tiết thiết kế: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+
+---
+
+## Team & phân công module
+
+| Thành viên | MSSV | Email | Module gợi ý | Folder chính |
+|------------|------|-------|--------------|--------------|
+| **Nguyen The Hien** | 22127107 | *(owner)* | Contract + Gateway + tích hợp | `backend/gateway/`, `backend/services/contract-service/` |
+| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Pricing + Operation | `backend/services/pricing-service/`, `operation-service/` |
+| **Bui Le Khoi** | 22127205 | blkhoi22@clc.fitus.edu.vn | Billing + Workflow | `backend/services/billing-service/`, `workflow-service/` |
+| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | Notification + Audit + E-Sign + Frontend | `notification-service/`, `audit-service/`, `esign-service/`, `frontend/` |
+
+> Phân công có thể điều chỉnh trong team — cập nhật [CONTRIBUTING.md](./CONTRIBUTING.md) khi thống nhất.
+
+**Quy tắc vàng:** Mỗi service **chỉ ghi DB của mình**. Giao tiếp cross-service qua **REST** (gateway) hoặc **Kafka events** — không join DB chéo.
+
+---
+
+## Cấu trúc thư mục
+
+```
+Project UDPT/
+│
+├── backend/
+│   ├── gateway/                    # API Gateway — JWT, proxy, RBAC, admin
+│   │   └── app/
+│   │       ├── api/                # auth.py, admin.py
+│   │       ├── core/               # config, deps
+│   │       └── main.py             # SERVICE_MAP + route proxy
+│   │
+│   ├── libs/
+│   │   └── udpt_common/            # ★ Thư viện dùng chung (CÀI TRƯỚC KHI CODE)
+│   │       └── udpt_common/        # StateMachine, auth, kafka, audit, storage…
+│   │
+│   ├── services/                   # ★ 8 microservices — MỖI SERVICE 1 FOLDER
+│   │   ├── contract-service/       # UC-01, 02, 03  → port 8001
+│   │   ├── pricing-service/        # UC-04           → port 8002
+│   │   ├── operation-service/      # UC-05           → port 8003
+│   │   ├── billing-service/        # UC-06           → port 8004
+│   │   ├── workflow-service/       # UC-07           → port 8005
+│   │   ├── notification-service/   # UC-09           → port 8006
+│   │   ├── audit-service/          # UC-10           → port 8007
+│   │   └── esign-service/          # UC-08           → port 8008
+│   │
+│   └── tests/                      # Integration tests SC-01 → SC-10
+│       ├── conftest.py
+│       └── integration/
+│
+├── frontend/                       # React + Vite + TypeScript
+│   └── src/
+│       ├── api/modules.ts          # ★ Gọi API qua Gateway
+│       ├── config/rbac.ts          # Phân quyền menu + route
+│       ├── pages/                  # ★ 1 folder = 1 module UI
+│       │   ├── auth/               # Login
+│       │   ├── customers/          # UC-01
+│       │   ├── contracts/          # UC-02, 03 (Appendices)
+│       │   ├── pricing/            # UC-04
+│       │   ├── operations/         # UC-05
+│       │   ├── billing/            # UC-06
+│       │   ├── approvals/          # UC-07 inbox
+│       │   ├── esign/              # UC-08
+│       │   ├── notifications/      # UC-09
+│       │   ├── audit/              # UC-10
+│       │   └── admin/
+│       ├── components/             # UI tái sử dụng (DataTable, StatusBadge…)
+│       ├── context/                # Auth, Theme, Locale, Toast
+│       ├── i18n/                   # messages.ts (VI/EN)
+│       └── routes/                 # AppRoutes + RoleRoute guard
+│
+├── config/                         # ★ Cấu hình nghiệp vụ (KHÔNG hard-code)
+│   ├── state_machines.json         # Trạng thái HĐ, billing, pricing…
+│   ├── workflow_definitions.json   # Chuỗi phê duyệt theo document_type
+│   └── seed_data.json              # Dữ liệu demo + test scenarios
+│
+├── docs/                           # Tài liệu thiết kế
+│   ├── SERVICE_MAP.md              # ★ Bản đồ module — ĐỌC ĐẦU TIÊN
+│   ├── ARCHITECTURE.md
+│   └── QTKD_DATH.pdf               # Đề bài gốc
+│
+├── infra/
+│   ├── postgres/init-databases.sql # Tạo 6 database khi boot
+│   └── k8s/                        # Kubernetes manifests (Minikube)
+│
+├── docker-compose.yml              # Chạy full stack local
+├── Makefile                        # make up | down | logs | ps
+├── pyproject.toml                  # pytest config
+├── CONTRIBUTING.md                 # Quy ước branch, commit, PR
+└── .env.example                    # Copy → .env trước khi chạy
+```
+
+### Cấu trúc bên trong mỗi microservice
+
+Mọi service backend **dùng cùng một layout** — học một lần, áp dụng cho cả 8 service:
+
+```
+backend/services/<tên-service>/app/
+├── api/v1/           # Route HTTP (mỏng — chỉ gọi service)
+├── core/             # config.py, deps.py (DB session)
+├── domain/           # State machine registry, enums
+├── models/           # SQLAlchemy entities
+├── schemas/          # Pydantic request/response DTO
+├── services/         # ★ Business logic — CODE CHÍNH Ở ĐÂY
+├── repositories/     # Truy vấn DB
+├── consumers/        # (nếu có) Kafka consumer
+└── db/               # session.py, base.py
+```
+
+---
 
 ## Quick Start
 
-### Prerequisites
+### Yêu cầu
 
-- Docker & Docker Compose
-- Node.js 20+ (frontend local dev)
-- Python 3.11+ (backend local dev)
+| Tool | Phiên bản |
+|------|-----------|
+| Docker & Docker Compose | latest |
+| Node.js (dev frontend local) | 20+ |
+| Python (dev backend local) | 3.11+ |
 
-### 1. Clone & configure
+### 1. Clone & cấu hình
 
 ```bash
+git clone https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS.git
+cd Enterprise-Management-System---DISTRIBUTED-APPLICATIONS
 cp .env.example .env
 ```
 
-### 2. Start everything
+### 2. Chạy full stack
 
 ```bash
 make up
+# hoặc: docker compose up -d --build
 ```
 
-### 3. Access
+Đợi ~30–60 giây cho Postgres, Kafka healthy.
 
-| URL | Description |
-|-----|-------------|
-| http://localhost:5173 | Frontend |
+### 3. Truy cập
+
+| URL | Mô tả |
+|-----|--------|
+| http://localhost:5173 | **Frontend** (dùng URL này, không dùng bare `localhost`) |
 | http://localhost:8080/docs | API Gateway Swagger |
 | http://localhost:8001/docs | Contract Service Swagger |
 | http://localhost:9001 | MinIO Console |
 
-### Demo login
+### 4. Dev local từng phần (tùy chọn)
 
-| User | Password | Role |
-|------|----------|------|
-| sale01 | sale01 | Sales Staff |
-| manager01 | manager01 | Sales Manager |
-| legal01 | legal01 | Legal |
-| ops01 | ops01 | Operations (Khai thác) |
-| account01 | account01 | Accounting |
-| director01 | director01 | Director |
-| admin01 | admin01 | Admin |
+```bash
+# Backend một service
+cd backend/services/contract-service
+pip install -r requirements.txt
+pip install -e ../../libs/udpt_common
+uvicorn app.main:app --reload --port 8001
 
-## Project Structure
-
-```
-.
-├── backend/
-│   ├── gateway/                 # JWT auth + API routing
-│   ├── libs/udpt_common/        # Shared Python library
-│   └── services/                # 8 domain microservices
-├── frontend/                    # React + Vite + TypeScript
-├── config/                      # State machines, workflows, seed data
-├── docs/                        # Architecture, SERVICE_MAP, assignment PDFs
-├── infra/                       # Postgres init, K8s placeholder
-├── docker-compose.yml
-└── Makefile
+# Frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-## Documentation
+---
 
-| Doc | Purpose |
-|-----|---------|
-| [docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md) | Which folder for which UC |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design overview |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Branch naming, PR flow |
+## Tài khoản demo & phân quyền
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for conventions.
+Password = username cho tất cả account.
 
-## Next Steps
+| User | Vai trò | Phòng ban | Menu chính |
+|------|---------|-----------|------------|
+| `sale01` | SALES_STAFF | Kinh doanh | KH, HĐ, Bảng giá, Phê duyệt |
+| `sale02` | SALES_STAFF | Kinh doanh | Cùng role — dùng demo APR-01 (không phải assignee) |
+| `manager01` | SALES_MANAGER | Kinh doanh | Giống sale01 |
+| `legal01` | LEGAL | Pháp chế | HĐ, Phụ lục, Phê duyệt |
+| `ops01` | OPERATIONS | Khai thác | Khối lượng |
+| `account01` | ACCOUNTING | Kế toán | Billing, Ký số, Phê duyệt |
+| `director01` | DIRECTOR | Ban GĐ | Oversight + Audit |
+| `admin01` | ADMIN | Quản trị | Full quyền |
 
-- [ ] Contract Service: models + CRUD + state machine
-- [ ] Workflow Service: config-driven engine
-- [ ] Billing Service: price snapshot logic
-- [ ] Kafka consumers: notification, audit, esign
-- [ ] Frontend: connect pages to API
-- [ ] Kubernetes manifests
-- [ ] Integration tests SC-01 → SC-10
+RBAC: sidebar + route guard (frontend) + gateway API (backend). Gõ URL sai quyền → trang 403.
+
+---
+
+## Quy trình làm việc (Git)
+
+### Thành viên mới — setup Git identity (chỉ trong repo này)
+
+Dùng tên và email GitHub tương ứng:
+
+| Thành viên | Lệnh setup |
+|------------|------------|
+| Le Quang Tan | `git config user.name "Le Quang Tan"` · `git config user.email "TanaLQ098@gmail.com"` |
+| Bui Le Khoi | `git config user.name "Bui Le Khoi"` · `git config user.email "blkhoi22@clc.fitus.edu.vn"` |
+| Nguyen Minh Hieu | `git config user.name "Nguyen Minh Hieu"` · `git config user.email "hieu251103@gmail.com"` |
+
+Sau khi owner mời collaborator, thành viên **Accept invitation** trong email/GitHub notifications rồi `git clone` repo.
+
+### Branch & commit
+
+```bash
+# Tạo branch theo module của bạn
+git checkout -b feature/pricing-overlap-validation
+
+# Commit theo convention
+git commit -m "feat(pricing): add PRC-03 overlap check for SC-02"
+```
+
+Quy ước chi tiết: [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+| Loại | Format ví dụ |
+|------|----------------|
+| Branch | `feature/<service>-<mô-tả-ngắn>` |
+| Commit | `feat(billing): …` / `fix(workflow): …` / `docs(readme): …` |
+
+### Pull Request checklist
+
+- [ ] Service chạy được (`make up` hoặc uvicorn riêng)
+- [ ] `/health` trả OK
+- [ ] Không commit `.env` / secrets
+- [ ] Cập nhật Swagger nếu đổi API
+- [ ] Chạy test liên quan (nếu có)
+
+---
+
+## Testing
+
+```bash
+# Cần stack đang chạy (make up)
+pip install -e ".[test]"
+pytest backend/tests -v
+```
+
+| Scenario | Mô tả |
+|----------|--------|
+| SC-01 → SC-10 | Xem `config/seed_data.json` → `test_scenarios` |
+| File test | `backend/tests/integration/test_scenarios.py` |
+
+---
+
+## Tài liệu tham khảo
+
+| Tài liệu | Nội dung |
+|----------|----------|
+| [docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md) | Bản đồ UC → folder → API |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Thiết kế hệ thống |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Quy ước code & Git |
+| [infra/k8s/README.md](./infra/k8s/README.md) | Deploy Kubernetes |
+| [config/state_machines.json](./config/state_machines.json) | State machine |
+| [config/workflow_definitions.json](./config/workflow_definitions.json) | Workflow phê duyệt |
+
+---
+
+## Demo flow gợi ý (trình bày)
+
+1. `sale01` → Tạo/submit hợp đồng HD2026002  
+2. `manager01` → `legal01` → `account01` → `director01` → Phê duyệt 5 bước  
+3. `ops01` → Khóa kỳ + nhập sản lượng  
+4. `account01` → Generate billing → Submit → E-sign → Publish  
+5. `director01` → Audit log  
+6. Toggle Dark mode + VI trên topbar  
+
+---
+
+<p align="center">
+  <sub>Logistics ABC Corporation · UDPT Course · 2026</sub>
+</p>

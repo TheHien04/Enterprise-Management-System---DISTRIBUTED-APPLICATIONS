@@ -10,6 +10,14 @@ class WorkflowRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def get_by_id_for_update(self, workflow_id: UUID) -> WorkflowInstance | None:
+        result = await self.session.scalars(
+            select(WorkflowInstance)
+            .where(WorkflowInstance.id == workflow_id)
+            .with_for_update()
+        )
+        return result.first()
+
     async def get_by_id(self, workflow_id: UUID) -> WorkflowInstance | None:
         return await self.session.get(WorkflowInstance, workflow_id)
 
@@ -30,15 +38,21 @@ class WorkflowRepository:
         )
         return result.first()
 
-    async def list_inbox(self, role: str) -> list[WorkflowInstance]:
-        result = await self.session.scalars(
-            select(WorkflowInstance)
-            .where(
-                WorkflowInstance.status == "IN_PROGRESS",
-                WorkflowInstance.current_assignee_role == role,
-            )
-            .order_by(WorkflowInstance.updated_at.desc())
+    async def list_inbox(self, role: str, user_id: str | None = None) -> list[WorkflowInstance]:
+        query = select(WorkflowInstance).where(
+            WorkflowInstance.status == "IN_PROGRESS",
+            WorkflowInstance.current_assignee_role == role,
         )
+        if user_id:
+            from sqlalchemy import or_
+
+            query = query.where(
+                or_(
+                    WorkflowInstance.current_assignee_user_id.is_(None),
+                    WorkflowInstance.current_assignee_user_id == user_id,
+                )
+            )
+        result = await self.session.scalars(query.order_by(WorkflowInstance.updated_at.desc()))
         return list(result)
 
     async def add(self, workflow: WorkflowInstance) -> WorkflowInstance:

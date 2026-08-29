@@ -300,14 +300,20 @@ class BillingSheetService:
         return sheet
 
     async def send_for_esign(self, sheet_id):
-        """PAY-06: only after internal approval."""
+        """PAY-06: only after internal approval. PAY-07: retry allowed from FAILED."""
         sheet = await self.repo.get_by_id(sheet_id)
         if not sheet:
             raise NotFoundError("Billing sheet not found")
         if sheet.approval_status != "APPROVED":
             raise ValidationError("Billing sheet must be APPROVED before e-sign (PAY-06)")
-        self.signing_sm.assert_transition(sheet.signing_status, "PENDING_SEND")
-        sheet.signing_status = "PENDING_SEND"
+        if sheet.signing_status == "FAILED":
+            self.signing_sm.assert_transition(sheet.signing_status, "PENDING_SEND")
+            sheet.signing_status = "PENDING_SEND"
+        elif sheet.signing_status in {"NONE", "CANCELLED"}:
+            self.signing_sm.assert_transition(sheet.signing_status, "PENDING_SEND")
+            sheet.signing_status = "PENDING_SEND"
+        elif sheet.signing_status != "PENDING_SEND":
+            raise ValidationError(f"Cannot send e-sign from signing_status={sheet.signing_status}")
         self.signing_sm.assert_transition(sheet.signing_status, "SIGNING")
         sheet.signing_status = "SIGNING"
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -318,20 +324,16 @@ class BillingSheetService:
         return sheet
 
     async def complete_esign(self, sheet_id, success: bool):
-        """PAY-07: reflect signing result and allow retry on failure."""
+        """PAY-07: reflect signing result; keep APPROVED on failure so retry is allowed."""
         sheet = await self.repo.get_by_id(sheet_id)
         if not sheet:
             raise NotFoundError("Billing sheet not found")
         if success:
             self.signing_sm.assert_transition(sheet.signing_status, "SIGNED")
             sheet.signing_status = "SIGNED"
-        else:
-            if sheet.signing_status == "SIGNING":
-                self.signing_sm.assert_transition(sheet.signing_status, "FAILED")
-                sheet.signing_status = "FAILED"
-            if sheet.approval_status == "APPROVED":
-                self.approval_sm.assert_transition(sheet.approval_status, "REVISION_REQUESTED")
-                sheet.approval_status = "REVISION_REQUESTED"
+        elif sheet.signing_status == "SIGNING":
+            self.signing_sm.assert_transition(sheet.signing_status, "FAILED")
+            sheet.signing_status = "FAILED"
         return sheet
 
     async def publish_sheet(self, sheet_id):

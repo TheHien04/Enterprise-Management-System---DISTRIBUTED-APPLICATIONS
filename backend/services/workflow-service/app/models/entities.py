@@ -18,6 +18,7 @@ class WorkflowInstance(Base):
     status: Mapped[str] = mapped_column(String(32), default="IN_PROGRESS")
     current_step_num: Mapped[int] = mapped_column(Integer, default=1)
     current_assignee_role: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    current_assignee_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     submitted_by: Mapped[str] = mapped_column(String(64))
     version: Mapped[int] = mapped_column(Integer, default=1)  # optimistic lock (SC-05)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)

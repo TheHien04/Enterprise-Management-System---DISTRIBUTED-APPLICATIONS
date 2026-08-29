@@ -1,37 +1,66 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { billingApi, contractsApi, operationsApi, pricingApi, workflowsApi } from '@/api/modules'
+import {
+  billingApi,
+  contractsApi,
+  notificationsApi,
+  operationsApi,
+  pricingApi,
+  workflowsApi,
+} from '@/api/modules'
 import { useAsync } from '@/hooks/useAsync'
 import { useLocale } from '@/context/LocaleContext'
 import { roleDepartmentLabel } from '@/config/rbac'
 import { PageHeader, StatCard, StatSkeletonGrid } from '@/components/ui'
 import { Icons } from '@/components/ui/icons'
+import { buildExceptions, daysUntil, countBySeverity } from '@/lib/exceptions'
 import { interpolate } from '@/i18n/messages'
 import type { UserRole } from '@/types/auth'
+import type { Contract, PriceList } from '@/types/domain'
+
+function isExpiringWithin30Days(dateStr: string): boolean {
+  const days = daysUntil(dateStr)
+  return days >= 0 && days <= 30
+}
 
 export default function DashboardPage() {
   const { user, hasRole } = useAuth()
   const { t } = useLocale()
   const role = (user?.roles[0] ?? 'SALES_STAFF') as UserRole
+  const userId = user?.username ?? ''
 
   const showSales = hasRole('SALES_STAFF', 'SALES_MANAGER', 'ADMIN')
   const showLegal = hasRole('LEGAL')
   const showAccounting = hasRole('ACCOUNTING', 'ADMIN')
   const showOperations = hasRole('OPERATIONS', 'ADMIN')
   const showDirector = hasRole('DIRECTOR')
+  const showContracts = showSales || showLegal || showDirector || hasRole('SALES_MANAGER')
+  const showPricing = showSales || showDirector || hasRole('SALES_MANAGER')
+  const showBilling = showAccounting || showDirector
+  const showApprovals = hasRole(
+    'SALES_STAFF',
+    'SALES_MANAGER',
+    'LEGAL',
+    'ACCOUNTING',
+    'DIRECTOR',
+    'ADMIN',
+  )
 
-  const inbox = useAsync(async () => (await workflowsApi.inbox(role)).data, [role])
+  const inbox = useAsync(
+    async () => (showApprovals ? (await workflowsApi.inbox(role)).data : []),
+    [role, showApprovals],
+  )
   const contracts = useAsync(
-    async () => (showSales || showLegal || showDirector ? (await contractsApi.list()).data : []),
-    [showSales, showLegal, showDirector],
+    async () => (showContracts ? (await contractsApi.list()).data : []),
+    [showContracts],
   )
   const priceLists = useAsync(
-    async () => (showSales || showDirector ? (await pricingApi.listPriceLists()).data : []),
-    [showSales, showDirector],
+    async () => (showPricing ? (await pricingApi.listPriceLists()).data : []),
+    [showPricing],
   )
   const billing = useAsync(
-    async () => (showAccounting || showDirector ? (await billingApi.list()).data : []),
-    [showAccounting, showDirector],
+    async () => (showBilling ? (await billingApi.list()).data : []),
+    [showBilling],
   )
   const volumes = useAsync(
     async () => (showOperations || showDirector ? (await operationsApi.listVolumes()).data : []),
@@ -41,6 +70,10 @@ export default function DashboardPage() {
     async () => (showOperations || showDirector ? (await operationsApi.listPeriods()).data : []),
     [showOperations, showDirector],
   )
+  const notifications = useAsync(
+    async () => (userId ? (await notificationsApi.list(userId)).data : []),
+    [userId],
+  )
 
   const loading =
     inbox.loading ||
@@ -48,17 +81,39 @@ export default function DashboardPage() {
     priceLists.loading ||
     billing.loading ||
     volumes.loading ||
-    periods.loading
+    periods.loading ||
+    notifications.loading
 
   const activeContracts = (contracts.data ?? []).filter((c) => c.status === 'ACTIVE').length
   const pendingReview = (contracts.data ?? []).filter((c) => c.status === 'UNDER_REVIEW').length
   const lockedPeriods = (periods.data ?? []).filter((p) => p.status === 'LOCKED' || p.status === 'RECONCILED').length
+  const openPeriods = (periods.data ?? []).filter((p) => p.status === 'OPEN').length
+  const draftContracts = (contracts.data ?? []).filter((c) => c.status === 'DRAFT').length
+  const unreadCount = (notifications.data ?? []).filter((n) => !n.read).length
+
+  const exceptions = buildExceptions({
+    inbox: inbox.data,
+    contracts: contracts.data,
+    priceLists: priceLists.data,
+    billing: billing.data,
+  })
+  const excCounts = countBySeverity(exceptions)
+
+  const expiringContracts = (contracts.data ?? []).filter(
+    (c: Contract) => c.status === 'ACTIVE' && isExpiringWithin30Days(c.effective_to),
+  )
+  const expiringPriceLists = (priceLists.data ?? []).filter(
+    (pl: PriceList) => ['EFFECTIVE', 'APPROVED'].includes(pl.status) && isExpiringWithin30Days(pl.effective_to),
+  )
+  const showExpiryWarnings =
+    showContracts && (expiringContracts.length > 0 || expiringPriceLists.length > 0)
 
   const quickLinks: { to: string; label: string; show: boolean }[] = [
-    { to: '/approvals', label: t('nav.approvals'), show: hasRole('SALES_STAFF', 'SALES_MANAGER', 'LEGAL', 'ACCOUNTING', 'DIRECTOR', 'ADMIN') },
+    { to: '/exceptions', label: t('nav.exceptions'), show: true },
+    { to: '/approvals', label: t('nav.approvals'), show: showApprovals },
     { to: '/operations', label: t('nav.operations'), show: hasRole('OPERATIONS', 'DIRECTOR', 'ADMIN') },
     { to: '/billing', label: t('nav.billing'), show: hasRole('ACCOUNTING', 'DIRECTOR', 'ADMIN') },
-    { to: '/contracts', label: t('nav.contracts'), show: hasRole('SALES_STAFF', 'SALES_MANAGER', 'LEGAL', 'DIRECTOR', 'ADMIN') },
+    { to: '/contracts', label: t('nav.contracts'), show: showContracts },
     { to: '/audit', label: t('nav.audit'), show: hasRole('DIRECTOR', 'ADMIN') },
   ].filter((link) => link.show)
 
@@ -98,52 +153,149 @@ export default function DashboardPage() {
       {loading ? (
         <StatSkeletonGrid count={4} />
       ) : (
-        <div className="grid-stats">
-          <StatCard
-            label={t('dash.statInbox')}
-            value={inbox.data?.length ?? 0}
-            trend={t('dash.statInboxTrend')}
-            icon={Icons.inbox}
-          />
-          {(showSales || showLegal || showDirector) && (
-            <StatCard
-              label={t('dash.statContracts')}
-              value={contracts.data?.length ?? 0}
-              trend={interpolate(t('dash.statContractsTrend'), { active: activeContracts, review: pendingReview })}
-              icon={Icons.document}
-            />
+        <>
+          {(inbox.data?.length ?? 0) > 0 && (
+            <div className="control-tower-cta">
+              <div>
+                <p className="control-tower-eyebrow">{t('dash.awaitingMe')}</p>
+                <p className="control-tower-text">
+                  {interpolate(t('dash.awaitingMeDesc'), { count: inbox.data?.length ?? 0 })}
+                </p>
+              </div>
+              <Link to="/approvals" className="btn btn-sm">
+                {t('dash.awaitingMeAction')}
+              </Link>
+            </div>
           )}
-          {(showSales || showDirector) && (
+
+          <div className="kpi-strip" aria-label={t('dash.kpiStrip')}>
+            <Link to="/exceptions" className={`kpi-chip${excCounts.critical > 0 ? ' kpi-chip-critical' : ''}`}>
+              <span className="kpi-chip-value">{excCounts.total}</span>
+              <span className="kpi-chip-label">{t('dash.kpiExceptions')}</span>
+            </Link>
+            <Link to="/notifications" className="kpi-chip">
+              <span className="kpi-chip-value">{unreadCount}</span>
+              <span className="kpi-chip-label">{t('dash.kpiUnread')}</span>
+            </Link>
+            {(showOperations || showDirector) && (
+              <Link to="/operations" className="kpi-chip">
+                <span className="kpi-chip-value">{openPeriods}</span>
+                <span className="kpi-chip-label">{t('dash.kpiOpenPeriods')}</span>
+              </Link>
+            )}
+            {showContracts && (
+              <Link to="/contracts" className="kpi-chip">
+                <span className="kpi-chip-value">{draftContracts}</span>
+                <span className="kpi-chip-label">{t('dash.kpiDrafts')}</span>
+              </Link>
+            )}
+            {excCounts.total > 0 && (
+              <Link to="/exceptions" className="btn btn-secondary btn-sm kpi-strip-action">
+                {t('dash.kpiViewExceptions')}
+              </Link>
+            )}
+          </div>
+
+          <div className="grid-stats">
             <StatCard
-              label={t('dash.statPriceLists')}
-              value={priceLists.data?.length ?? 0}
-              trend={t('dash.statPriceListsTrend')}
-              icon={Icons.pricing}
+              label={t('dash.statInbox')}
+              value={inbox.data?.length ?? 0}
+              trend={t('dash.statInboxTrend')}
+              icon={Icons.inbox}
             />
-          )}
-          {(showAccounting || showDirector) && (
-            <StatCard
-              label={t('dash.statBilling')}
-              value={billing.data?.length ?? 0}
-              trend={t('dash.statBillingTrend')}
-              icon={Icons.billing}
-            />
-          )}
-          {(showOperations || showDirector) && (
-            <>
+            {showContracts && (
               <StatCard
-                label={t('dash.statVolumes')}
-                value={volumes.data?.length ?? 0}
-                trend={t('dash.statVolumesTrend')}
-                icon={Icons.operations}
+                label={t('dash.statContracts')}
+                value={contracts.data?.length ?? 0}
+                trend={interpolate(t('dash.statContractsTrend'), { active: activeContracts, review: pendingReview })}
+                icon={Icons.document}
               />
+            )}
+            {showPricing && (
               <StatCard
-                label={t('dash.statPeriods')}
-                value={periods.data?.length ?? 0}
-                trend={interpolate(t('dash.statPeriodsTrend'), { locked: lockedPeriods })}
-                icon={Icons.operations}
+                label={t('dash.statPriceLists')}
+                value={priceLists.data?.length ?? 0}
+                trend={t('dash.statPriceListsTrend')}
+                icon={Icons.pricing}
               />
-            </>
+            )}
+            {showBilling && (
+              <StatCard
+                label={t('dash.statBilling')}
+                value={billing.data?.length ?? 0}
+                trend={t('dash.statBillingTrend')}
+                icon={Icons.billing}
+              />
+            )}
+            {(showOperations || showDirector) && (
+              <>
+                <StatCard
+                  label={t('dash.statVolumes')}
+                  value={volumes.data?.length ?? 0}
+                  trend={t('dash.statVolumesTrend')}
+                  icon={Icons.operations}
+                />
+                <StatCard
+                  label={t('dash.statPeriods')}
+                  value={periods.data?.length ?? 0}
+                  trend={interpolate(t('dash.statPeriodsTrend'), { locked: lockedPeriods })}
+                  icon={Icons.operations}
+                />
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {showContracts && !loading && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header">
+            <div>
+              <h3 className="card-title">{t('dash.expiryWarnings')}</h3>
+              <p className="card-subtitle">{t('dash.expiryWarningsSubtitle')}</p>
+            </div>
+          </div>
+          {!showExpiryWarnings ? (
+            <p style={{ padding: '0 20px 20px', color: 'var(--text-muted)', margin: 0 }}>
+              {t('dash.noExpiryWarnings')}
+            </p>
+          ) : (
+            <div style={{ padding: '0 20px 20px', display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+              {expiringContracts.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 10px' }}>{t('dash.expiringContracts')}</h4>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {expiringContracts.map((c) => (
+                      <li key={c.id}>
+                        <Link to={`/contracts/${c.id}`} className="link-primary">
+                          <span className="cell-mono">{c.code}</span>
+                        </Link>
+                        <span style={{ marginLeft: 8, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                          {interpolate(t('dash.expiresIn'), { days: daysUntil(c.effective_to) })} · {c.effective_to}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {expiringPriceLists.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 10px' }}>{t('dash.expiringPriceLists')}</h4>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {expiringPriceLists.map((pl) => (
+                      <li key={pl.id}>
+                        <Link to={`/pricing/${pl.id}`} className="link-primary">
+                          <span className="cell-mono">{pl.contract_code}</span> v{pl.version}
+                        </Link>
+                        <span style={{ marginLeft: 8, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                          {interpolate(t('dash.expiresIn'), { days: daysUntil(pl.effective_to) })} · {pl.effective_to}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

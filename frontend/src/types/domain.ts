@@ -21,6 +21,8 @@ export interface Contract {
   id: string
   code: string
   customer_id: string
+  customer_code?: string | null
+  customer_name?: string | null
   title: string
   effective_from: string
   effective_to: string
@@ -51,7 +53,11 @@ export interface WorkflowItem {
   status: string
   current_step_num: number
   current_assignee_role?: string | null
+  current_assignee_user_id?: string | null
   submitted_by: string
+  version?: number
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface PriceListItem {
@@ -141,6 +147,27 @@ export interface AdminUser {
   username: string
   full_name: string
   roles: string[]
+}
+
+export interface AdminWorkflowTemplateStep {
+  step_num: number
+  step_name: string
+  assignee_role: string
+  required: boolean
+}
+
+export interface AdminWorkflowTemplate {
+  document_type: string
+  name: string
+  description?: string
+  steps: AdminWorkflowTemplateStep[]
+}
+
+export interface PriceListCompareRow {
+  service_code: string
+  price_a: number | null
+  price_b: number | null
+  delta: number | null
 }
 
 export interface NotificationItem {

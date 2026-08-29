@@ -14,7 +14,11 @@ export default function CustomersPage() {
   const { showToast } = useToast()
   const { t } = useLocale()
   const { data, error, loading, reload } = useAsync(async () => (await customersApi.list()).data, [])
-  const [form, setForm] = useState({ code: '', name: '', tax_code: '' })
+  const [form, setForm] = useState(() => ({
+    code: `KH${Date.now().toString().slice(-6)}`,
+    name: '',
+    tax_code: '',
+  }))
   const [saving, setSaving] = useState(false)
 
   async function onCreate(event: FormEvent) {
@@ -23,7 +27,7 @@ export default function CustomersPage() {
     try {
       const code = form.code
       await customersApi.create(form)
-      setForm({ code: '', name: '', tax_code: '' })
+      setForm({ code: `KH${Date.now().toString().slice(-6)}`, name: '', tax_code: '' })
       showToast('success', t('toast.customerCreated'), interpolate(t('toast.customerCreatedDesc'), { code }))
       await reload()
     } catch (err) {

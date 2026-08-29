@@ -1,6 +1,7 @@
 import { apiRequest } from './client'
 import type {
   AdminUser,
+  AdminWorkflowTemplate,
   ApiListResponse,
   Appendix,
   AuditLog,
@@ -12,6 +13,7 @@ import type {
   NotificationItem,
   Period,
   PriceList,
+  PriceListCompareRow,
   ServiceCatalogItem,
   Volume,
   WorkflowHistoryLog,
@@ -89,23 +91,29 @@ export const workflowsApi = {
     apiRequest<ApiListResponse<WorkflowHistoryLog[]>>(
       `/api/v1/workflows/document/${documentType}/${documentId}/history`,
     ),
-  approve: (id: string, comment?: string) =>
-    apiRequest<ApiListResponse<WorkflowItem>>(`/api/v1/workflows/${id}/approve`, {
+  approve: (id: string, comment?: string, version?: number) => {
+    const q = version != null ? `?version=${version}` : ''
+    return apiRequest<ApiListResponse<WorkflowItem>>(`/api/v1/workflows/${id}/approve${q}`, {
       method: 'POST',
       body: JSON.stringify({ comment }),
-    }),
-  reject: (id: string, comment?: string) =>
-    apiRequest<ApiListResponse<WorkflowItem>>(`/api/v1/workflows/${id}/reject`, {
+    })
+  },
+  reject: (id: string, comment?: string, version?: number) => {
+    const q = version != null ? `?version=${version}` : ''
+    return apiRequest<ApiListResponse<WorkflowItem>>(`/api/v1/workflows/${id}/reject${q}`, {
       method: 'POST',
       body: JSON.stringify({ comment }),
-    }),
+    })
+  },
   get: (id: string) =>
     apiRequest<ApiListResponse<WorkflowProgress>>(`/api/v1/workflows/${id}`),
-  requestRevision: (id: string, comment?: string) =>
-    apiRequest<ApiListResponse<WorkflowItem>>(`/api/v1/workflows/${id}/request-revision`, {
+  requestRevision: (id: string, comment?: string, version?: number) => {
+    const q = version != null ? `?version=${version}` : ''
+    return apiRequest<ApiListResponse<WorkflowItem>>(`/api/v1/workflows/${id}/request-revision${q}`, {
       method: 'POST',
       body: JSON.stringify({ comment }),
-    }),
+    })
+  },
 }
 
 export const pricingApi = {
@@ -128,6 +136,44 @@ export const pricingApi = {
     }),
   submitPriceList: (id: string) =>
     apiRequest<ApiListResponse<PriceList>>(`/api/v1/pricing/price-lists/${id}/submit`, { method: 'POST' }),
+  updatePriceList: (
+    id: string,
+    payload: {
+      version?: string
+      effective_from?: string
+      effective_to?: string
+      items?: { service_code: string; unit_price: number }[]
+    },
+  ) =>
+    apiRequest<ApiListResponse<PriceList>>(`/api/v1/pricing/price-lists/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  comparePriceLists: async (idA: string, idB: string) => {
+    const [resA, resB] = await Promise.all([
+      apiRequest<ApiListResponse<PriceList>>(`/api/v1/pricing/price-lists/${idA}`),
+      apiRequest<ApiListResponse<PriceList>>(`/api/v1/pricing/price-lists/${idB}`),
+    ])
+    const listA = resA.data
+    const listB = resB.data
+    const codes = new Set([
+      ...(listA.items ?? []).map((i) => i.service_code),
+      ...(listB.items ?? []).map((i) => i.service_code),
+    ])
+    const rows: PriceListCompareRow[] = [...codes].sort().map((code) => {
+      const itemA = listA.items?.find((i) => i.service_code === code)
+      const itemB = listB.items?.find((i) => i.service_code === code)
+      const priceA = itemA?.unit_price ?? null
+      const priceB = itemB?.unit_price ?? null
+      return {
+        service_code: code,
+        price_a: priceA,
+        price_b: priceB,
+        delta: priceA != null && priceB != null ? priceB - priceA : null,
+      }
+    })
+    return { listA, listB, rows }
+  },
   listCatalog: () => apiRequest<ApiListResponse<ServiceCatalogItem[]>>('/api/v1/pricing/catalog/services'),
 }
 
@@ -157,6 +203,11 @@ export const operationsApi = {
     apiRequest<ApiListResponse<Volume>>('/api/v1/operations/volumes', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+  updateVolume: (id: string, quantity: number) =>
+    apiRequest<ApiListResponse<Volume>>(`/api/v1/operations/volumes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ quantity }),
     }),
 }
 
@@ -220,11 +271,16 @@ export const esignApi = {
 
 export const adminApi = {
   listUsers: () => apiRequest<ApiListResponse<AdminUser[]>>('/api/v1/admin/users'),
+  listRoles: () => apiRequest<ApiListResponse<string[]>>('/api/v1/admin/roles'),
+  listWorkflowTemplates: () =>
+    apiRequest<ApiListResponse<AdminWorkflowTemplate[]>>('/api/v1/admin/workflow-templates'),
 }
 
 export const notificationsApi = {
   list: (userId: string) =>
-    apiRequest<ApiListResponse<NotificationItem[]>>(`/api/v1/notifications?user_id=${encodeURIComponent(userId)}`),
+    apiRequest<ApiListResponse<NotificationItem[]>>(
+      `/api/v1/notifications?user_id=${encodeURIComponent(userId)}`,
+    ),
   markRead: (id: string) =>
     apiRequest<ApiListResponse<NotificationItem>>(`/api/v1/notifications/${id}/read`, { method: 'PATCH' }),
 }

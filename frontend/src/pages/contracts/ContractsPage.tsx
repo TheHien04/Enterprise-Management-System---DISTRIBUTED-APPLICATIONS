@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { contractsApi, customersApi } from '@/api/modules'
 import { useAsync } from '@/hooks/useAsync'
@@ -7,16 +7,20 @@ import { useLocale } from '@/context/LocaleContext'
 import { PageHeader, StatusBadge, TableSkeleton } from '@/components/ui'
 import DataTable, { type DataTableColumn } from '@/components/ui/DataTable'
 import { Icons } from '@/components/ui/icons'
+import { tStatus } from '@/i18n/helpers'
 import { interpolate } from '@/i18n/messages'
 import type { Contract, Customer } from '@/types/domain'
+
+const PIPELINE_STATUSES = ['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'ACTIVE', 'REJECTED', 'EXPIRED'] as const
 
 export default function ContractsPage() {
   const { showToast } = useToast()
   const { t } = useLocale()
   const customers = useAsync(async () => (await customersApi.list()).data, [])
   const contracts = useAsync(async () => (await contractsApi.list()).data, [])
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [form, setForm] = useState({
-    code: '',
+    code: `HD${new Date().getFullYear()}${Date.now().toString().slice(-4)}`,
     customer_id: '',
     title: '',
     effective_from: '2026-07-01',
@@ -26,14 +30,43 @@ export default function ContractsPage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState<string | null>(null)
 
-  const customerMap = Object.fromEntries((customers.data ?? []).map((c: Customer) => [c.id, c.code]))
+  const customerMap = Object.fromEntries(
+    (customers.data ?? []).map((c: Customer) => [c.id, `${c.code} — ${c.name}`]),
+  )
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const c of contracts.data ?? []) {
+      counts[c.status] = (counts[c.status] ?? 0) + 1
+    }
+    return counts
+  }, [contracts.data])
+
+  const filteredContracts = useMemo(() => {
+    const rows = contracts.data ?? []
+    if (!statusFilter) return rows
+    return rows.filter((c) => c.status === statusFilter)
+  }, [contracts.data, statusFilter])
+
+  function customerLabel(contract: Contract) {
+    if (contract.customer_code) {
+      return contract.customer_name
+        ? `${contract.customer_code} — ${contract.customer_name}`
+        : contract.customer_code
+    }
+    return customerMap[contract.customer_id] ?? contract.customer_id.slice(0, 8)
+  }
   async function onCreate(event: FormEvent) {
     event.preventDefault()
     setSaving(true)
     try {
       await contractsApi.create(form)
       showToast('success', t('toast.contractCreated'), interpolate(t('toast.contractCreatedDesc'), { code: form.code }))
+      setForm((prev) => ({
+        ...prev,
+        code: `HD${new Date().getFullYear()}${Date.now().toString().slice(-4)}`,
+        title: '',
+      }))
       await contracts.reload()
     } catch (err) {
       showToast('error', t('toast.createFailed'), err instanceof Error ? err.message : t('error.unknown'))
@@ -72,8 +105,8 @@ export default function ContractsPage() {
       key: 'customer',
       header: t('col.customer'),
       sortable: true,
-      sortValue: (r) => customerMap[r.customer_id] ?? '',
-      render: (r) => customerMap[r.customer_id] ?? r.customer_id,
+      sortValue: (r) => r.customer_code ?? customerMap[r.customer_id] ?? '',
+      render: (r) => customerLabel(r),
     },
     {
       key: 'status',
@@ -103,6 +136,13 @@ export default function ContractsPage() {
     },
   ]
 
+  const pipelineStatuses = [
+    ...PIPELINE_STATUSES.filter((s) => (statusCounts[s] ?? 0) > 0 || s === statusFilter),
+    ...Object.keys(statusCounts).filter(
+      (s) => !(PIPELINE_STATUSES as readonly string[]).includes(s),
+    ),
+  ]
+
   return (
     <div className="page-enter">
       <PageHeader
@@ -127,7 +167,9 @@ export default function ContractsPage() {
             <label htmlFor="customer">{t('col.customer')}</label>
             <select id="customer" className="input" value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })} required>
               <option value="">{t('form.selectCustomer')}</option>
-              {(customers.data ?? []).map((c: Customer) => (
+              {(customers.data ?? [])
+                .filter((c: Customer) => c.status === 'ACTIVE')
+                .map((c: Customer) => (
                 <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
               ))}
             </select>
@@ -161,12 +203,35 @@ export default function ContractsPage() {
             </p>
           </div>
         </div>
+
+        <div className="pipeline-strip" role="group" aria-label={t('pipeline.label')}>
+          <button
+            type="button"
+            className={`pipeline-chip${!statusFilter ? ' active' : ''}`}
+            onClick={() => setStatusFilter(null)}
+          >
+            {t('pipeline.all')}
+            <span className="pipeline-count">{contracts.data?.length ?? 0}</span>
+          </button>
+          {pipelineStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={`pipeline-chip${statusFilter === status ? ' active' : ''}`}
+              onClick={() => setStatusFilter((prev) => (prev === status ? null : status))}
+            >
+              {tStatus(status, t)}
+              <span className="pipeline-count">{statusCounts[status] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
         {contracts.loading ? (
           <TableSkeleton rows={5} />
         ) : (
           <DataTable
             columns={columns}
-            data={contracts.data ?? []}
+            data={filteredContracts}
             rowKey={(r) => r.id}
             searchKeys={(r) => `${r.code} ${customerMap[r.customer_id] ?? ''} ${r.status}`}
             searchPlaceholder={t('search.contracts')}

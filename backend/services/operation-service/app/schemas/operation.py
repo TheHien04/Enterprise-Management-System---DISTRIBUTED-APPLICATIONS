@@ -24,6 +24,10 @@ class VolumeCreate(BaseModel):
     period: str = Field(pattern=r"^\d{4}-\d{2}$")
 
 
+class VolumeUpdate(BaseModel):
+    quantity: float = Field(gt=0)
+
+
 class VolumeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

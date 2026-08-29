@@ -43,8 +43,9 @@ export default function NotificationsPage() {
           </div>
         </div>
 
+        {items.error && <div className="alert alert-error">{items.error}</div>}
         {items.loading && <LoadingState />}
-        {!items.loading && (items.data ?? []).length === 0 && (
+        {!items.loading && !items.error && (items.data ?? []).length === 0 && (
           <EmptyState title={t('empty.noNotifications')} description={t('empty.noNotificationsDesc')} icon={Icons.bell} />
         )}
 

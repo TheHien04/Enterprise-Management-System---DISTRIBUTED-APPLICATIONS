@@ -22,13 +22,25 @@ from app.services.customer_service import AppendixService, ContractService
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 
+async def _enrich_contracts(session: AsyncSession, contracts) -> list[ContractOut]:
+    customers = {c.id: c for c in await CustomerRepository(session).list_all()}
+    enriched: list[ContractOut] = []
+    for contract in contracts:
+        out = ContractOut.model_validate(contract)
+        customer = customers.get(contract.customer_id)
+        if customer:
+            out = out.model_copy(update={"customer_code": customer.code, "customer_name": customer.name})
+        enriched.append(out)
+    return enriched
+
+
 @router.get("", response_model=SuccessResponse[list[ContractOut]])
 async def list_contracts(
     customer_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ):
     repo = ContractRepository(session)
-    data = await repo.list_all(customer_id)
+    data = await _enrich_contracts(session, await repo.list_all(customer_id))
     return SuccessResponse(data=data)
 
 

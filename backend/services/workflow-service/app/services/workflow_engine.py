@@ -1,11 +1,13 @@
-import httpx
+from udpt_common.assignee_map import resolve_assignee_user
 from udpt_common.audit_helper import log_audit
 from udpt_common.config_loader import load_json_config
 from udpt_common.deps import RequestUser
 from udpt_common.document_callbacks import notify_document_status
 from udpt_common.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from udpt_common.outbox import enqueue_domain_event
 
 from app.core.config import settings
+from app.db.base import OutboxEvent
 from app.models.entities import WorkflowActionLog, WorkflowInstance
 from app.repositories.workflow_repo import WorkflowRepository
 from app.schemas.workflow import WorkflowProgress, WorkflowStartRequest
@@ -44,13 +46,15 @@ class WorkflowEngine:
             raise ConflictError("Workflow already in progress for this document (double submit blocked)")
         definition = self._get_definition(payload.document_type)
         first_step = definition["steps"][0]
+        assignee_role = first_step["assignee_role"]
         workflow = WorkflowInstance(
             document_type=payload.document_type,
             document_id=payload.document_id,
             definition_name=definition["name"],
             status="IN_PROGRESS",
             current_step_num=first_step["step_num"],
-            current_assignee_role=first_step["assignee_role"],
+            current_assignee_role=assignee_role,
+            current_assignee_user_id=resolve_assignee_user(assignee_role, payload.submitted_by),
             submitted_by=payload.submitted_by,
             idempotency_key=idempotency_key,
         )
@@ -88,8 +92,8 @@ class WorkflowEngine:
             current_step=current,
         )
 
-    async def inbox(self, role: str):
-        return await self.repo.list_inbox(role)
+    async def inbox(self, role: str, user_id: str | None = None):
+        return await self.repo.list_inbox(role, user_id=user_id)
 
     async def approve(self, workflow_id, user: RequestUser, comment: str | None = None, expected_version: int | None = None):
         return await self._advance(workflow_id, user, "APPROVE", comment, expected_version)
@@ -102,6 +106,7 @@ class WorkflowEngine:
         actor_role = workflow.current_assignee_role or (user.roles[0] if user.roles else "UNKNOWN")
         workflow.status = "REJECTED"
         workflow.current_assignee_role = None
+        workflow.current_assignee_user_id = None
         workflow.version += 1
         await self.repo.add_log(
             WorkflowActionLog(
@@ -141,6 +146,7 @@ class WorkflowEngine:
         actor_role = workflow.current_assignee_role or (user.roles[0] if user.roles else "UNKNOWN")
         workflow.status = "REVISION_REQUESTED"
         workflow.current_assignee_role = "SALES_STAFF"
+        workflow.current_assignee_user_id = workflow.submitted_by
         workflow.version += 1
         await self.repo.add_log(
             WorkflowActionLog(
@@ -179,7 +185,6 @@ class WorkflowEngine:
         current = self._current_step(definition, workflow.current_step_num)
         if not current:
             raise ValidationError("Workflow has no active step")
-        # APR-02: only advance one step at a time — enforced by step_num + 1
         await self.repo.add_log(
             WorkflowActionLog(
                 workflow_id=workflow.id,
@@ -196,10 +201,12 @@ class WorkflowEngine:
         if next_step:
             workflow.current_step_num = next_step_num
             workflow.current_assignee_role = next_step["assignee_role"]
+            workflow.current_assignee_user_id = resolve_assignee_user(next_step["assignee_role"], workflow.submitted_by)
             await self._emit_notification(workflow, "WORKFLOW_STEP_ADVANCED")
         else:
             workflow.status = "APPROVED"
             workflow.current_assignee_role = None
+            workflow.current_assignee_user_id = None
             await notify_document_status(
                 document_type=workflow.document_type,
                 document_id=workflow.document_id,
@@ -218,7 +225,7 @@ class WorkflowEngine:
         return workflow
 
     async def _get_workflow(self, workflow_id, expected_version: int | None = None):
-        workflow = await self.repo.get_by_id(workflow_id)
+        workflow = await self.repo.get_by_id_for_update(workflow_id)
         if not workflow:
             raise NotFoundError("Workflow not found")
         if workflow.status != "IN_PROGRESS":
@@ -231,13 +238,19 @@ class WorkflowEngine:
         required_role = workflow.current_assignee_role
         if required_role and not user.has_role(required_role):
             raise ForbiddenError(f"Only role {required_role} can action this workflow step (APR-01)")
+        assignee_user = workflow.current_assignee_user_id
+        if assignee_user and user.user_id != assignee_user:
+            raise ForbiddenError(
+                f"Only assignee {assignee_user} can action this step — not {user.user_id} (APR-01)"
+            )
 
     async def get_document_history(self, document_type: str, document_id: str):
         return await self.repo.list_logs_by_document(document_type, document_id)
 
     async def _emit_notification(self, workflow: WorkflowInstance, event_type: str) -> None:
+        """Enqueue to transactional outbox only — Kafka relay delivers to Notification Service (APR-07)."""
         payload = {
-            "user_id": workflow.submitted_by,
+            "user_id": workflow.current_assignee_user_id or workflow.submitted_by,
             "title": event_type.replace("_", " ").title(),
             "body": f"{workflow.document_type} {workflow.document_id} — step {workflow.current_step_num}",
             "event_type": event_type,
@@ -247,23 +260,4 @@ class WorkflowEngine:
             "action": event_type,
             "actor_id": workflow.submitted_by,
         }
-        try:
-            from udpt_common.kafka_events import publish_domain_event
-
-            await publish_domain_event(event_type, payload, settings.kafka_bootstrap_servers)
-        except Exception:
-            pass
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                await client.post(
-                    "http://notification-service:8006/api/v1/notifications",
-                    json={
-                        "user_id": payload["user_id"],
-                        "title": payload["title"],
-                        "body": payload["body"],
-                        "event_type": event_type,
-                        "reference_id": payload["reference_id"],
-                    },
-                )
-        except httpx.HTTPError:
-            return
+        await enqueue_domain_event(self.repo.session, OutboxEvent, event_type, payload)

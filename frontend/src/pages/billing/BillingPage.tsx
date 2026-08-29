@@ -56,8 +56,11 @@ export default function BillingPage() {
     const busy = (a: string) => actionLoading === `${a}-${sheet.id}`
     return (
       <div className="cell-actions">
+        <Link to={`/billing/${sheet.id}`} className="btn btn-sm">
+          {t('billing.openWizard')} {Icons.external}
+        </Link>
         <Link to={`/billing/${sheet.id}`} className="btn btn-secondary btn-sm">
-          {t('common.viewDetails')} {Icons.external}
+          {t('common.viewDetails')}
         </Link>
         <Link to="/esign" className="btn btn-secondary btn-sm">
           {t('common.esign')}

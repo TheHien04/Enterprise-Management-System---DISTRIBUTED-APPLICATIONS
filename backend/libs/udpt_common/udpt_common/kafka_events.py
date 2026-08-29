@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 DOMAIN_EVENTS_TOPIC = "udpt.domain.events"
 
 
-async def publish_domain_event(event_type: str, payload: dict[str, Any], bootstrap_servers: str) -> None:
-    """Publish domain event to Kafka; silently skip if broker unavailable (APR-07 fallback via HTTP)."""
+async def publish_domain_event(event_type: str, payload: dict[str, Any], bootstrap_servers: str) -> bool:
+    """Publish domain event to Kafka. Returns True on success, False if broker unavailable."""
     try:
         from aiokafka import AIOKafkaProducer
 
@@ -24,8 +24,21 @@ async def publish_domain_event(event_type: str, payload: dict[str, Any], bootstr
             )
         finally:
             await producer.stop()
+        return True
     except Exception as exc:
-        logger.warning("Kafka publish skipped: %s", exc)
+        logger.warning("Kafka publish failed: %s", exc)
+        return False
+
+
+async def count_pending_outbox(session_factory, OutboxEvent) -> int:
+    """Count PENDING outbox rows (for SC-07 / health checks)."""
+    from sqlalchemy import func as sqlfunc, select
+
+    async with session_factory() as session:
+        result = await session.scalar(
+            select(sqlfunc.count()).select_from(OutboxEvent).where(OutboxEvent.status == "PENDING")
+        )
+        return int(result or 0)
 
 
 async def run_domain_event_consumer(

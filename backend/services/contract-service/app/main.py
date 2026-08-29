@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -10,6 +11,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
+from app.services.expiry_service import emit_expiry_notifications, run_expiry_scheduler
 from app.services.seed import seed_demo_data
 
 
@@ -26,8 +28,17 @@ async def lifespan(_: FastAPI):
     )
     async with SessionLocal() as session:
         await seed_demo_data(session)
+        await emit_expiry_notifications(session)
         await session.commit()
+    stop_event = asyncio.Event()
+    scheduler_task = asyncio.create_task(run_expiry_scheduler(stop_event))
     yield
+    stop_event.set()
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(
@@ -37,6 +48,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
+    redirect_slashes=False,
 )
 
 app.add_middleware(

@@ -6,6 +6,7 @@ export type RouteAccess = Partial<Record<UserRole, true>>
 
 export const ROUTE_ROLES: Record<string, UserRole[] | null> = {
   '/dashboard': null,
+  '/exceptions': null,
   '/customers': ['SALES_STAFF', 'SALES_MANAGER', 'ADMIN'],
   '/contracts': ['SALES_STAFF', 'SALES_MANAGER', 'LEGAL', 'DIRECTOR', 'ADMIN'],
   '/appendices': ['SALES_STAFF', 'SALES_MANAGER', 'LEGAL', 'DIRECTOR', 'ADMIN'],
@@ -23,14 +24,17 @@ export const ROUTE_ROLES: Record<string, UserRole[] | null> = {
 export type NavItem = {
   to: string
   labelKey: MessageKey
-  icon: 'dashboard' | 'customers' | 'contracts' | 'appendices' | 'pricing' | 'operations' | 'billing' | 'esign' | 'approvals' | 'notifications' | 'audit' | 'admin'
+  icon: 'dashboard' | 'exceptions' | 'customers' | 'contracts' | 'appendices' | 'pricing' | 'operations' | 'billing' | 'esign' | 'approvals' | 'notifications' | 'audit' | 'admin'
   roles: UserRole[] | null
 }
 
 export const NAV_SECTIONS: { labelKey: MessageKey; items: NavItem[] }[] = [
   {
     labelKey: 'section.overview',
-    items: [{ to: '/dashboard', labelKey: 'nav.dashboard', icon: 'dashboard', roles: null }],
+    items: [
+      { to: '/dashboard', labelKey: 'nav.dashboard', icon: 'dashboard', roles: null },
+      { to: '/exceptions', labelKey: 'nav.exceptions', icon: 'exceptions', roles: null },
+    ],
   },
   {
     labelKey: 'section.commercial',

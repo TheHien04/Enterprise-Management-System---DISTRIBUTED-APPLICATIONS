@@ -21,7 +21,7 @@ export default function AppendicesPage() {
     [selectedContractId],
   )
   const [form, setForm] = useState({
-    code: '',
+    code: `PL${Date.now().toString().slice(-4)}`,
     contract_id: '',
     title: '',
     change_summary: '',
@@ -34,6 +34,10 @@ export default function AppendicesPage() {
     () => Object.fromEntries((contracts.data ?? []).map((c: Contract) => [c.id, c])),
     [contracts.data],
   )
+  const eligibleContracts = useMemo(
+    () => (contracts.data ?? []).filter((c: Contract) => c.status === 'ACTIVE' || c.status === 'APPROVED'),
+    [contracts.data],
+  )
 
   async function onCreate(event: FormEvent) {
     event.preventDefault()
@@ -44,12 +48,23 @@ export default function AppendicesPage() {
     }
     setSaving(true)
     try {
-      await contractsApi.createAppendix({ ...form, contract_id: contractId })
-      showToast('success', 'Appendix created', form.code)
+      await contractsApi.createAppendix({
+        ...form,
+        code: form.code.trim(),
+        title: form.title.trim(),
+        contract_id: contractId,
+      })
+      showToast('success', t('toast.appendixCreated'), form.code)
+      setForm((prev) => ({
+        ...prev,
+        code: `PL${Date.now().toString().slice(-4)}`,
+        title: '',
+        change_summary: '',
+      }))
       setSelectedContractId(contractId)
       await appendices.reload()
     } catch (err) {
-      showToast('error', 'Create failed', err instanceof Error ? err.message : 'Unknown error')
+      showToast('error', t('toast.createFailed'), err instanceof Error ? err.message : t('error.unknown'))
     } finally {
       setSaving(false)
     }
@@ -120,11 +135,16 @@ export default function AppendicesPage() {
               }}
               required
             >
-              <option value="">Select contract</option>
-              {(contracts.data ?? []).map((c: Contract) => (
-                <option key={c.id} value={c.id}>{c.code} — {c.title || 'Untitled'}</option>
+              <option value="">Select ACTIVE/APPROVED contract</option>
+              {eligibleContracts.map((c: Contract) => (
+                <option key={c.id} value={c.id}>{c.code} — {c.title || 'Untitled'} ({c.status})</option>
               ))}
             </select>
+            {!contracts.loading && eligibleContracts.length === 0 && (
+              <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: '0.8125rem' }}>
+                Appendix requires an APPROVED/ACTIVE contract (CTR-07). Seed demo: HD2026001.
+              </p>
+            )}
           </div>
           <div className="form-grid-2">
             <div className="form-field">

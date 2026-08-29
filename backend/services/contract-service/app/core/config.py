@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     minio_bucket: str = "contracts"
     minio_secure: bool = False
     audit_service_url: str = "http://audit-service:8007"
+    notification_service_url: str = "http://notification-service:8006"
 
 
 settings = Settings()

@@ -19,6 +19,7 @@ import AuditPage from '@/pages/audit/AuditPage'
 import AdminPage from '@/pages/admin/AdminPage'
 import PriceListDetailPage from '@/pages/pricing/PriceListDetailPage'
 import ForbiddenPage from '@/pages/errors/ForbiddenPage'
+import ExceptionsPage from '@/pages/exceptions/ExceptionsPage'
 import ProtectedRoute from './ProtectedRoute'
 import RoleRoute from './RoleRoute'
 
@@ -31,6 +32,7 @@ export default function AppRoutes() {
           <Route element={<RoleRoute />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/exceptions" element={<ExceptionsPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/customers/:id" element={<CustomerDetailPage />} />
             <Route path="/contracts" element={<ContractsPage />} />

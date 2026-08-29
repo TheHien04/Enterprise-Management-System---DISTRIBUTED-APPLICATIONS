@@ -27,12 +27,28 @@ async def start_workflow(
     return SuccessResponse(data=data, message="Workflow started")
 
 
+@router.get("/outbox/stats", response_model=SuccessResponse[dict])
+async def outbox_stats(session: AsyncSession = Depends(get_db)):
+    from sqlalchemy import func as sqlfunc, select
+
+    from app.db.base import OutboxEvent
+
+    pending = await session.scalar(
+        select(sqlfunc.count()).select_from(OutboxEvent).where(OutboxEvent.status == "PENDING")
+    )
+    published = await session.scalar(
+        select(sqlfunc.count()).select_from(OutboxEvent).where(OutboxEvent.status == "PUBLISHED")
+    )
+    return SuccessResponse(data={"pending": int(pending or 0), "published": int(published or 0)})
+
+
 @router.get("/inbox", response_model=SuccessResponse[list[WorkflowOut]])
 async def workflow_inbox(
     role: str = Query(...),
     session: AsyncSession = Depends(get_db),
+    user: RequestUser = Depends(get_request_user),
 ):
-    data = await _engine(session).inbox(role)
+    data = await _engine(session).inbox(role, user_id=user.user_id)
     return SuccessResponse(data=data)
 
 
@@ -81,8 +97,9 @@ async def reject_workflow(
     payload: WorkflowActionRequest,
     session: AsyncSession = Depends(get_db),
     user: RequestUser = Depends(get_request_user),
+    version: int | None = Query(default=None),
 ):
-    data = await _engine(session).reject(workflow_id, user, payload.comment)
+    data = await _engine(session).reject(workflow_id, user, payload.comment, version)
     return SuccessResponse(data=data, message="Workflow rejected")
 
 
@@ -92,6 +109,7 @@ async def request_revision(
     payload: WorkflowActionRequest,
     session: AsyncSession = Depends(get_db),
     user: RequestUser = Depends(get_request_user),
+    version: int | None = Query(default=None),
 ):
-    data = await _engine(session).request_revision(workflow_id, user, payload.comment)
+    data = await _engine(session).request_revision(workflow_id, user, payload.comment, version)
     return SuccessResponse(data=data, message="Revision requested")

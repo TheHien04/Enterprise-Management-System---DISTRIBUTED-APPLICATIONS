@@ -79,6 +79,10 @@ services:
       - "8080:8080"
     env_file:
       - .env.example
+    environment:
+      CONFIG_DIR: /config
+    volumes:
+      - ./config:/config:ro
     depends_on:
       - contract-service
       - redis

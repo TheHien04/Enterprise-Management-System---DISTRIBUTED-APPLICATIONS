@@ -4,4 +4,5 @@ from app.api.v1 import audit, health
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["Health"])
+api_router.include_router(health.router, prefix="/audit", tags=["Health"])
 api_router.include_router(audit.router)

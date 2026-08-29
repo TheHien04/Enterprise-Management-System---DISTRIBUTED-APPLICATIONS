@@ -91,7 +91,7 @@ async def test_sc03_billing_expired_contract(http_client, sale01_headers, accoun
 async def test_sc04_snapshot_unit_price_unchanged_after_price_list_update(
     http_client, sale01_headers, account01_headers
 ):
-    """SC-04: snapshot_unit_price frozen after billing generated (PAY-03)."""
+    """SC-04: snapshot_unit_price frozen after billing generated (PAY-03); EFFECTIVE list immutable (PRC-05)."""
     await ensure_active_contract(http_client, sale01_headers, "HD2026001")
     await ensure_billing_period(http_client, sale01_headers, "2026-08")
 
@@ -114,18 +114,45 @@ async def test_sc04_snapshot_unit_price_unchanged_after_price_list_update(
 
     snapshots_before = {item["service_code"]: item["snapshot_unit_price"] for item in sheet["items"]}
 
-    overlap_response = await http_client.post(
+    lists_response = await http_client.get(
+        "/api/v1/pricing/price-lists",
+        headers=sale01_headers,
+        params={"contract_code": "HD2026001"},
+    )
+    lists_response.raise_for_status()
+    effective = next(
+        (
+            pl
+            for pl in lists_response.json()["data"]
+            if pl["status"] == "EFFECTIVE"
+            and pl["effective_from"] <= "2026-08-15" <= pl["effective_to"]
+        ),
+        None,
+    )
+    assert effective is not None, "No EFFECTIVE price list covering Aug/2026"
+
+    # PRC-05: mutating the EFFECTIVE list used for billing must fail
+    mutate_response = await http_client.patch(
+        f"/api/v1/pricing/price-lists/{effective['id']}",
+        headers=sale01_headers,
+        json={"items": [{"service_code": "DV003", "unit_price": 999999}]},
+    )
+    assert mutate_response.status_code == 422, mutate_response.text
+    assert "PRC-05" in mutate_response.text or "new version" in mutate_response.text.lower()
+
+    # Creating a new non-overlapping draft must not change existing snapshots
+    create_response = await http_client.post(
         "/api/v1/pricing/price-lists",
         headers=sale01_headers,
         json={
             "contract_code": "HD2026001",
-            "version": "v-sc04-draft",
+            "version": f"v-sc04-{uuid.uuid4().hex[:6]}",
             "effective_from": "2027-01-01",
             "effective_to": "2027-12-31",
             "items": [{"service_code": "DV003", "unit_price": 999999}],
         },
     )
-    assert overlap_response.status_code == 200, overlap_response.text
+    assert create_response.status_code == 200, create_response.text
 
     sheet_response = await http_client.get(
         f"/api/v1/billing/billing-sheets/{sheet['id']}",
@@ -137,15 +164,29 @@ async def test_sc04_snapshot_unit_price_unchanged_after_price_list_update(
         for item in sheet_response.json()["data"]["items"]
     }
     assert snapshots_after == snapshots_before
+    assert snapshots_before.get("DV003") != 999999
 
 
 @pytest.mark.asyncio
-@pytest.mark.flaky
 async def test_sc05_concurrent_approve_one_conflict(http_client, sale01_headers):
     """SC-05: Concurrent approve same workflow step -> one HTTP 409."""
-    contract = await get_contract_by_code(http_client, sale01_headers, "HD2026002")
-    if contract["status"] != "DRAFT":
-        pytest.skip("HD2026002 not in DRAFT; use a fresh contract for race test")
+    customers_response = await http_client.get("/api/v1/customers/", headers=sale01_headers)
+    customers_response.raise_for_status()
+    customer = next(c for c in customers_response.json()["data"] if c.get("status") == "ACTIVE")
+
+    create_response = await http_client.post(
+        "/api/v1/contracts/",
+        headers=sale01_headers,
+        json={
+            "code": f"HD-SC05-{uuid.uuid4().hex[:8]}",
+            "customer_id": customer["id"],
+            "effective_from": "2026-07-01",
+            "effective_to": "2026-12-31",
+            "total_value": 1000000,
+        },
+    )
+    assert create_response.status_code == 200, create_response.text
+    contract = create_response.json()["data"]
 
     await add_contract_attachment(http_client, sale01_headers, contract["id"])
     submit_response = await submit_contract(http_client, sale01_headers, contract["id"])
@@ -153,7 +194,7 @@ async def test_sc05_concurrent_approve_one_conflict(http_client, sale01_headers)
     workflow_id = submit_response.json()["data"]["workflow_id"]
 
     progress_response = await http_client.get(
-        f"/api/v1/workflows/workflows/{workflow_id}",
+        f"/api/v1/workflows/{workflow_id}",
         headers=sale01_headers,
     )
     progress_response.raise_for_status()
@@ -163,7 +204,7 @@ async def test_sc05_concurrent_approve_one_conflict(http_client, sale01_headers)
 
     async def approve_once() -> int:
         response = await http_client.post(
-            f"/api/v1/workflows/workflows/{workflow_id}/approve",
+            f"/api/v1/workflows/{workflow_id}/approve",
             headers=sale_headers,
             json={"comment": "Concurrent approve"},
             params={"version": version},
@@ -172,8 +213,7 @@ async def test_sc05_concurrent_approve_one_conflict(http_client, sale01_headers)
 
     statuses = await asyncio.gather(approve_once(), approve_once())
     assert 200 in statuses
-    if 409 not in statuses:
-        pytest.skip("Race did not produce HTTP 409 (timing-dependent)")
+    assert 409 in statuses, f"Expected one HTTP 409 for concurrent approve, got {statuses}"
 
 
 @pytest.mark.asyncio
@@ -203,8 +243,13 @@ async def test_sc06_esign_fail_signing_status_failed(
         sheet = generate_response.json()["data"]
 
     sheet_id = sheet["id"]
-    if sheet.get("signing_status") == "FAILED":
-        assert sheet.get("approval_status") == "REVISION_REQUESTED"
+    # Legacy rows may still be FAILED+REVISION_REQUESTED from older PAY-07 behavior.
+    if sheet.get("signing_status") == "FAILED" and sheet.get("approval_status") == "APPROVED":
+        retry = await http_client.post(
+            f"/api/v1/billing/billing-sheets/{sheet_id}/send-esign",
+            headers=account01_headers,
+        )
+        assert retry.status_code == 200, retry.text
         return
 
     if sheet.get("approval_status") == "REVISION_REQUESTED":
@@ -231,7 +276,7 @@ async def test_sc06_esign_fail_signing_status_failed(
     if sheet.get("approval_status") != "APPROVED":
         workflows = (
             await http_client.get(
-                "/api/v1/workflows/workflows/inbox",
+                "/api/v1/workflows/inbox",
                 headers=account01_headers,
                 params={"role": "ACCOUNTING"},
             )
@@ -240,7 +285,7 @@ async def test_sc06_esign_fail_signing_status_failed(
         if not match:
             workflows = (
                 await http_client.get(
-                    "/api/v1/workflows/workflows/inbox",
+                    "/api/v1/workflows/inbox",
                     headers=director01_headers,
                     params={"role": "DIRECTOR"},
                 )
@@ -251,8 +296,14 @@ async def test_sc06_esign_fail_signing_status_failed(
         if match.get("current_assignee_role") == "ACCOUNTING":
             assert (await approve_workflow(http_client, "account01", workflow_id)).status_code == 200
         assert (await approve_workflow(http_client, "director01", workflow_id)).status_code == 200
+        sheet = (
+            await http_client.get(
+                f"/api/v1/billing/billing-sheets/{sheet_id}",
+                headers=account01_headers,
+            )
+        ).json()["data"]
 
-    if sheet.get("signing_status") not in {"SIGNING", "FAILED"}:
+    if sheet.get("signing_status") in {"NONE", "FAILED", "CANCELLED"}:
         esign_response = await http_client.post(
             f"/api/v1/billing/billing-sheets/{sheet_id}/send-esign",
             headers=account01_headers,
@@ -267,39 +318,104 @@ async def test_sc06_esign_fail_signing_status_failed(
     assert fail_response.status_code == 200, fail_response.text
     sheet = fail_response.json()["data"]
     assert sheet["signing_status"] == "FAILED"
-    assert sheet["approval_status"] == "REVISION_REQUESTED"
+    assert sheet["approval_status"] == "APPROVED"
+
+    retry_response = await http_client.post(
+        f"/api/v1/billing/billing-sheets/{sheet_id}/send-esign",
+        headers=account01_headers,
+    )
+    assert retry_response.status_code == 200, retry_response.text
+    assert retry_response.json()["data"]["signing_status"] == "SIGNING"
 
 
 @pytest.mark.asyncio
-async def test_sc07_notification_service_health(http_client, sale01_headers):
-    """SC-07: Notification/Kafka smoke — notification service health via gateway."""
-    response = await http_client.get("/api/v1/notifications/health", headers=sale01_headers)
-    assert response.status_code == 200
-    body = response.json()
-    assert body.get("status") == "ok" or body.get("success") is True
+async def test_sc07_outbox_and_notification_resilience(http_client, sale01_headers):
+    """SC-07: Business submit OK; outbox records events; notification service remains healthy (APR-07)."""
+    before_stats = (
+        await http_client.get("/api/v1/workflows/outbox/stats", headers=sale01_headers)
+    ).json()["data"]
+    before_total = int(before_stats.get("pending", 0)) + int(before_stats.get("published", 0))
+
+    customers_response = await http_client.get("/api/v1/customers/", headers=sale01_headers)
+    customers_response.raise_for_status()
+    customer = next(c for c in customers_response.json()["data"] if c.get("status") == "ACTIVE")
+
+    contract_code = f"HD-SC07-{uuid.uuid4().hex[:8]}"
+    create_response = await http_client.post(
+        "/api/v1/contracts/",
+        headers=sale01_headers,
+        json={
+            "code": contract_code,
+            "customer_id": customer["id"],
+            "effective_from": "2026-07-01",
+            "effective_to": "2026-12-31",
+            "total_value": 1000000,
+        },
+    )
+    assert create_response.status_code == 200, create_response.text
+    contract = create_response.json()["data"]
+    await add_contract_attachment(http_client, sale01_headers, contract["id"])
+    submit_response = await submit_contract(http_client, sale01_headers, contract["id"])
+    assert submit_response.status_code == 200, submit_response.text
+    assert submit_response.json()["data"].get("workflow_id"), "Business flow must succeed even if notify lags"
+
+    after_stats = (
+        await http_client.get("/api/v1/workflows/outbox/stats", headers=sale01_headers)
+    ).json()["data"]
+    after_total = int(after_stats.get("pending", 0)) + int(after_stats.get("published", 0))
+    assert after_total >= before_total + 1, (
+        f"Outbox must retain domain events after submit (before={before_total}, after={after_total})"
+    )
+
+    notify_response = await http_client.get("/api/v1/notifications/health", headers=sale01_headers)
+    assert notify_response.status_code == 200
+    body = notify_response.json()
+    assert body.get("status") in {"ok", "degraded"} or body.get("success") is True
 
 
 @pytest.mark.asyncio
 async def test_sc08_wrong_assignee_approve_forbidden(http_client, sale01_headers, legal01_headers):
-    """SC-08: Wrong assignee approves -> HTTP 403."""
-    contract = await get_contract_by_code(http_client, sale01_headers, "HD2026003")
-    if contract["status"] == "DRAFT":
-        await add_contract_attachment(http_client, sale01_headers, contract["id"])
-        submit_response = await submit_contract(http_client, sale01_headers, contract["id"])
-        assert submit_response.status_code == 200, submit_response.text
-        workflow_id = submit_response.json()["data"]["workflow_id"]
-    elif contract["status"] == "UNDER_REVIEW" and contract.get("workflow_id"):
-        workflow_id = contract["workflow_id"]
-    else:
-        pytest.skip(f"HD2026003 not submittable (status={contract['status']})")
+    """SC-08: Wrong role OR same-role wrong user -> HTTP 403 (APR-01)."""
+    customers_response = await http_client.get("/api/v1/customers/", headers=sale01_headers)
+    customers_response.raise_for_status()
+    customer = next(c for c in customers_response.json()["data"] if c.get("status") == "ACTIVE")
 
-    response = await http_client.post(
-        f"/api/v1/workflows/workflows/{workflow_id}/approve",
+    create_response = await http_client.post(
+        "/api/v1/contracts/",
+        headers=sale01_headers,
+        json={
+            "code": f"HD-SC08-{uuid.uuid4().hex[:8]}",
+            "customer_id": customer["id"],
+            "effective_from": "2026-07-01",
+            "effective_to": "2026-12-31",
+            "total_value": 1000000,
+        },
+    )
+    assert create_response.status_code == 200, create_response.text
+    contract = create_response.json()["data"]
+    await add_contract_attachment(http_client, sale01_headers, contract["id"])
+    submit_response = await submit_contract(http_client, sale01_headers, contract["id"])
+    assert submit_response.status_code == 200, submit_response.text
+    workflow_id = submit_response.json()["data"]["workflow_id"]
+
+    # Wrong role
+    wrong_role = await http_client.post(
+        f"/api/v1/workflows/{workflow_id}/approve",
         headers=legal01_headers,
         json={"comment": "Wrong role approval attempt"},
     )
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "FORBIDDEN"
+    assert wrong_role.status_code == 403
+    assert wrong_role.json()["error"]["code"] == "FORBIDDEN"
+
+    # Same role, wrong user (sale02 is SALES_STAFF but assignee is sale01)
+    sale02_headers = await auth_headers(http_client, "sale02")
+    wrong_user = await http_client.post(
+        f"/api/v1/workflows/{workflow_id}/approve",
+        headers=sale02_headers,
+        json={"comment": "Same role, wrong assignee"},
+    )
+    assert wrong_user.status_code == 403
+    assert wrong_user.json()["error"]["code"] == "FORBIDDEN"
 
 
 @pytest.mark.asyncio
@@ -339,7 +455,7 @@ async def test_sc09_idempotency_key_double_submit(http_client, sale01_headers):
     assert first.json()["data"]["workflow_id"] == second.json()["data"]["workflow_id"]
 
     history_response = await http_client.get(
-        f"/api/v1/workflows/workflows/document/CONTRACT/{contract['id']}/history",
+        f"/api/v1/workflows/document/CONTRACT/{contract['id']}/history",
         headers=sale01_headers,
     )
     history_response.raise_for_status()

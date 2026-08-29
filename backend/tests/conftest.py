@@ -14,6 +14,7 @@ GATEWAY_URL = os.getenv("UDPT_GATEWAY_URL", "http://localhost:8080")
 
 USER_CREDENTIALS: dict[str, tuple[str, str]] = {
     "sale01": ("sale01", "sale01"),
+    "sale02": ("sale02", "sale02"),
     "manager01": ("manager01", "manager01"),
     "legal01": ("legal01", "legal01"),
     "account01": ("account01", "account01"),
@@ -168,7 +169,7 @@ async def approve_workflow(
     headers = await auth_headers(client, username)
     params = {"version": version} if version is not None else None
     return await client.post(
-        f"/api/v1/workflows/workflows/{workflow_id}/approve",
+        f"/api/v1/workflows/{workflow_id}/approve",
         headers=headers,
         json={"comment": "Approved in integration test"},
         params=params,

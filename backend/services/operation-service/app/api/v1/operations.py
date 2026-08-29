@@ -1,10 +1,12 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from udpt_common.responses import SuccessResponse
 
 from app.core.deps import get_db
 from app.repositories.operation_repo import PeriodRepository, VolumeRepository
-from app.schemas.operation import PeriodCreate, PeriodOut, VolumeCreate, VolumeOut
+from app.schemas.operation import PeriodCreate, PeriodOut, VolumeCreate, VolumeOut, VolumeUpdate
 from app.services.operation_service import PeriodService, VolumeService
 
 router = APIRouter(tags=["Operations"])
@@ -50,3 +52,13 @@ async def list_volumes(
 async def create_volume(payload: VolumeCreate, session: AsyncSession = Depends(get_db)):
     data = await _volume_service(session).create_volume(payload)
     return SuccessResponse(data=data, message="Volume record created")
+
+
+@router.patch("/volumes/{volume_id}", response_model=SuccessResponse[VolumeOut])
+async def update_volume(
+    volume_id: UUID,
+    payload: VolumeUpdate,
+    session: AsyncSession = Depends(get_db),
+):
+    data = await _volume_service(session).update_volume(volume_id, payload)
+    return SuccessResponse(data=data, message="Volume record updated")

@@ -19,7 +19,7 @@ Enterprise Business Management System for Logistics ABC — microservices monore
         └──────────────┬──────────────┴──────────────┬──────────────┘
                        ▼                             ▼
                  PostgreSQL                      Kafka + Redis
-              (database-per-service)            (events, cache)
+              (database-per-service)     (events, idempotency, rate limit)
 ```
 
 ## Design principles
@@ -31,21 +31,24 @@ Enterprise Business Management System for Logistics ABC — microservices monore
 | **Config-driven workflow** | No hard-coded approval if/else — `config/workflow_definitions.json` |
 | **State machines** | `udpt_common.StateMachine` + `config/state_machines.json` |
 | **Thin controllers** | Routes → Services → Repositories |
-| **Async side effects** | Outbox → Kafka → Notification / Audit / E-Sign |
+| **Transactional outbox** | Domain events written to `outbox_events` in the same DB transaction; relay worker publishes to Kafka (`udpt_common/outbox.py`) |
+| **Async side effects** | Outbox → Kafka → Notification / Audit (no duplicate HTTP notify) |
 | **API versioning** | All REST under `/api/v1` |
-| **Security** | JWT at gateway; assignee check in workflow (APR-01) |
+| **Security** | JWT at gateway; RBAC by role + **assignee user id** in workflow (APR-01); Redis rate limit |
+| **Idempotency** | Redis `X-Idempotency-Key` at gateway |
+| **Expiry alerts** | Background scheduler in contract-service (contracts + price lists within 30 days) |
 
 ## Request flow
 
 1. Client calls Gateway with `Authorization: Bearer <JWT>`.
-2. Gateway validates token, forwards to target service with `X-User-Id`, `X-User-Roles`.
+2. Gateway validates token, applies rate limit, forwards to target service with `X-User-Id`, `X-User-Roles`.
 3. Service executes domain logic, persists to its DB.
-4. Domain events written to outbox (same transaction) → worker publishes to Kafka.
-5. Consumer services update read models / send notifications.
+4. Domain events enqueued to **outbox** (same transaction) → background relay publishes to Kafka.
+5. Consumer services (Notification, Audit) process events; HTTP notification fallback if Kafka temporarily unavailable.
 
 ## Service boundaries
 
-See **[docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md)** for the team navigation index.
+See **[docs/SERVICE_MAP.md](./SERVICE_MAP.md)** for the team navigation index.
 
 ## Related documents
 

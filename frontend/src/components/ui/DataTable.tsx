@@ -20,7 +20,9 @@ interface DataTableProps<T> {
   pageSize?: number
   emptyTitle?: string
   emptyDescription?: string
+  emptyAction?: ReactNode
   rowKey: (row: T) => string
+  rowClassName?: (row: T) => string | undefined
 }
 
 export default function DataTable<T>({
@@ -32,7 +34,9 @@ export default function DataTable<T>({
   pageSize = 8,
   emptyTitle,
   emptyDescription,
+  emptyAction,
   rowKey,
+  rowClassName,
 }: DataTableProps<T>) {
   const { t } = useLocale()
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('common.search')
@@ -101,11 +105,16 @@ export default function DataTable<T>({
       )}
 
       {paged.length === 0 ? (
-        <EmptyState title={resolvedEmptyTitle} description={emptyDescription} icon={Icons.empty} />
+        <EmptyState
+          title={resolvedEmptyTitle}
+          description={emptyDescription}
+          icon={Icons.empty}
+          action={emptyAction}
+        />
       ) : (
         <>
           <div className="table-wrap">
-            <table className="data-table">
+            <table className="data-table data-table-dense">
               <thead>
                 <tr>
                   {columns.map((col) => (
@@ -124,7 +133,7 @@ export default function DataTable<T>({
               </thead>
               <tbody>
                 {paged.map((row) => (
-                  <tr key={rowKey(row)}>
+                  <tr key={rowKey(row)} className={rowClassName?.(row)}>
                     {columns.map((col) => (
                       <td key={col.key}>{col.render(row)}</td>
                     ))}
