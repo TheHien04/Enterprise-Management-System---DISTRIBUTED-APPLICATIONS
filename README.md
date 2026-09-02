@@ -83,14 +83,16 @@ Chi tiết thiết kế: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ## Team & phân công module
 
-| Thành viên | MSSV | Email | Module gợi ý | Folder chính |
-|------------|------|-------|--------------|--------------|
-| **Nguyen The Hien** | 22127107 | *(owner)* | Contract + Gateway + tích hợp | `backend/gateway/`, `backend/services/contract-service/` |
-| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Pricing + Operation | `backend/services/pricing-service/`, `operation-service/` |
-| **Bui Le Khoi** | 22127205 | blkhoi22@clc.fitus.edu.vn | Billing + Workflow | `backend/services/billing-service/`, `workflow-service/` |
-| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | Notification + Audit + E-Sign + Frontend | `notification-service/`, `audit-service/`, `esign-service/`, `frontend/` |
+Chi tiết deliverable, ma trận UC → owner: **[docs/TEAM_ASSIGNMENT.md](./docs/TEAM_ASSIGNMENT.md)**
 
-> Phân công có thể điều chỉnh trong team — cập nhật [CONTRIBUTING.md](./CONTRIBUTING.md) khi thống nhất.
+| Thành viên | MSSV | Email | Trách nhiệm | Folder chính |
+|------------|------|-------|-------------|--------------|
+| **Nguyen The Hien** | 22127107 | *(owner)* | **Phụ trách chính** — Gateway, Contract, `udpt_common`, infra, FE core, tích hợp | `backend/gateway/`, `contract-service/`, `libs/udpt_common/`, FE layout/auth/dashboard/contracts/customers/exceptions |
+| **Bui Le Khoi** | 22127205 | blkhoi22@clc.fitus.edu.vn | **Phụ trách chính** — Billing, Workflow, FE billing/approvals, workflow config | `billing-service/`, `workflow-service/`, `pages/billing/`, `pages/approvals/` |
+| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Pricing, Operation, FE pricing/ops | `pricing-service/`, `operation-service/`, `pages/pricing/`, `operations/` |
+| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | *Phạm vi thu hẹp* — Notification, Audit, E-Sign + 3 màn FE | `notification-service/`, `audit-service/`, `esign-service/`, `pages/notifications/`, `audit/`, `esign/` |
+
+> Script demo bảo vệ: [docs/DEMO.md](./docs/DEMO.md) · Q&A vấn đáp: [docs/DEFENSE_GUIDE.md](./docs/DEFENSE_GUIDE.md) · Luồng xử lý: [docs/REQUEST_FLOWS.md](./docs/REQUEST_FLOWS.md)
 
 **Quy tắc vàng:** Mỗi service **chỉ ghi DB của mình**. Giao tiếp cross-service qua **REST** (gateway) hoặc **Kafka events** — không join DB chéo.
 
@@ -319,23 +321,28 @@ pytest backend/tests -v
 
 | Tài liệu | Nội dung |
 |----------|----------|
+| [docs/TEAM_ASSIGNMENT.md](./docs/TEAM_ASSIGNMENT.md) | **Phân công chi tiết** — ai làm gì, deliverable bảo vệ |
+| [docs/DEMO.md](./docs/DEMO.md) | Script demo 3 phút + xử lý sự cố |
+| [docs/DEFENSE_GUIDE.md](./docs/DEFENSE_GUIDE.md) | Câu hỏi vấn đáp thường gặp |
+| [docs/REQUEST_FLOWS.md](./docs/REQUEST_FLOWS.md) | Sequence diagram luồng xử lý |
 | [docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md) | Bản đồ UC → folder → API |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Thiết kế hệ thống |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Quy ước code & Git |
 | [infra/k8s/README.md](./infra/k8s/README.md) | Deploy Kubernetes |
 | [config/state_machines.json](./config/state_machines.json) | State machine |
-| [config/workflow_definitions.json](./config/workflow_definitions.json) | Workflow phê duyệt |
+| [docs/GAPS_AND_ROADMAP.md](./docs/GAPS_AND_ROADMAP.md) | Phạm vi đủ/thiếu & checklist nộp báo cáo |
 
 ---
 
 ## Demo flow gợi ý (trình bày)
 
-1. `sale01` → Tạo/submit hợp đồng HD2026002  
-2. `manager01` → `legal01` → `account01` → `director01` → Phê duyệt 5 bước  
-3. `ops01` → Khóa kỳ + nhập sản lượng  
-4. `account01` → Generate billing → Submit → E-sign → Publish  
-5. `director01` → Audit log  
-6. Toggle Dark mode + VI trên topbar  
+Xem script đầy đủ theo từng thành viên: **[docs/DEMO.md](./docs/DEMO.md)**
+
+1. **Hien** — `sale01` → Dashboard/Exceptions → Contract → Activity timeline  
+2. **Khoi** — `manager01`/`legal01` Approvals → `account01` Billing print  
+3. **Tan** — `ops01` Volumes khóa kỳ; (tuỳ chọn) Pricing compare  
+4. **Hieu** — `director01` Audit + Notifications  
+5. Toggle Dark mode + VI/EN trên topbar  
 
 ---
 

@@ -52,6 +52,10 @@ See **[docs/SERVICE_MAP.md](./SERVICE_MAP.md)** for the team navigation index.
 
 ## Related documents
 
-- [Assignment spec](./docs/QTKD_DATH.pdf)
-- [Sample data](./docs/Data%20sample.pdf)
+- [Team assignment (chi tiết phân công)](./TEAM_ASSIGNMENT.md)
+- [Demo script bảo vệ](./DEMO.md)
+- [Defense Q&A](./DEFENSE_GUIDE.md)
+- [Request flows (sequence diagrams)](./REQUEST_FLOWS.md)
+- [Assignment spec](./QTKD_DATH.pdf)
+- [Sample data](./Data%20sample.pdf)
 - [Contributing guide](../CONTRIBUTING.md)

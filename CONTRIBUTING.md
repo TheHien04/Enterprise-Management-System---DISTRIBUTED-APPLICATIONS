@@ -33,19 +33,23 @@ Hướng dẫn cho thành viên nhóm khi clone repo, chọn module, commit và 
 
 ## 2. Phân công module (team Logistics ABC)
 
-| Thành viên | MSSV | Email | Trách nhiệm chính | Folder |
-|------------|------|-------|-------------------|--------|
-| Nguyen The Hien | 22127107 | *(repo owner)* | Contract, Gateway, tích hợp | `backend/gateway/`, `backend/services/contract-service/` |
-| Le Quang Tan | 22127378 | TanaLQ098@gmail.com | Pricing, Operation | `backend/services/pricing-service/`, `operation-service/` |
-| Bui Le Khoi | 22127205 | blkhoi22@clc.fitus.edu.vn | Billing, Workflow | `backend/services/billing-service/`, `workflow-service/` |
-| Nguyen Minh Hieu | 21127742 | hieu251103@gmail.com | Notification, Audit, E-Sign, Frontend | `notification-service/`, `audit-service/`, `esign-service/`, `frontend/` |
+**Bản chi tiết (deliverable, UC matrix):** [docs/TEAM_ASSIGNMENT.md](./docs/TEAM_ASSIGNMENT.md)
+
+| Thành viên | MSSV | Trách nhiệm | Folder |
+|------------|------|-------------|--------|
+| Nguyen The Hien | 22127107 | **Phụ trách chính** — Gateway, Contract, `udpt_common`, infra, FE core | `backend/gateway/`, `contract-service/`, `libs/udpt_common/`, FE layout/auth/dashboard/contracts/customers/exceptions |
+| Bui Le Khoi | 22127205 | **Phụ trách chính** — Billing, Workflow, FE billing/approvals | `billing-service/`, `workflow-service/`, `pages/billing/`, `pages/approvals/` |
+| Le Quang Tan | 22127378 | Pricing, Operation, FE pricing/ops | `pricing-service/`, `operation-service/`, `pages/pricing/`, `pages/operations/` |
+| Nguyen Minh Hieu | 21127742 | *Phạm vi thu hẹp* — Notification, Audit, E-Sign + 3 màn FE | `notification-service/`, `audit-service/`, `esign-service/`, `pages/notifications/`, `audit/`, `esign/` |
 
 **Shared (cả team):**
 
 | Resource | Path | Ai sửa |
 |----------|------|--------|
 | State machines | `config/state_machines.json` | Thống nhất team trước khi merge |
-| Workflow definitions | `config/workflow_definitions.json` | Workflow owner (Khoi) |
+| Workflow definitions | `config/workflow_definitions.json` | **Khoi** (workflow owner) |
+| Integration SC-01,02,07,08,10 | `backend/tests/integration/` | **Hien** |
+| Integration SC-03,04,05,06,09 | `backend/tests/integration/` | **Khoi** |
 | Seed data | `config/seed_data.json` | Người thêm scenario demo |
 | Shared lib | `backend/libs/udpt_common/` | Review cẩn thận — ảnh hưởng mọi service |
 
@@ -194,6 +198,10 @@ test(integration): add SC-02 overlapping price list case
 
 | Cần gì | Xem |
 |--------|-----|
+| Phân công chi tiết | [docs/TEAM_ASSIGNMENT.md](./docs/TEAM_ASSIGNMENT.md) |
+| Demo bảo vệ | [docs/DEMO.md](./docs/DEMO.md) |
+| Vấn đáp | [docs/DEFENSE_GUIDE.md](./docs/DEFENSE_GUIDE.md) |
+| Luồng xử lý | [docs/REQUEST_FLOWS.md](./docs/REQUEST_FLOWS.md) |
 | Tìm file code | [docs/SERVICE_MAP.md](./docs/SERVICE_MAP.md) |
 | Kiến trúc tổng thể | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
 | Chạy project | [README.md](./README.md) |

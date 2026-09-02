@@ -31,6 +31,8 @@ curl -fsSL https://downloads.cursor.com/origin/install.sh | sh
 ## After push — tell your team
 
 1. Clone the repo
-2. Read **`docs/SERVICE_MAP.md`** — find your service in 30 seconds
-3. Read **`CONTRIBUTING.md`** — branch naming & conventions
-4. Run `cp .env.example .env && make up`
+2. Read **`docs/TEAM_ASSIGNMENT.md`** — phân công chi tiết từng người
+3. Read **`docs/SERVICE_MAP.md`** — find your service in 30 seconds
+4. Read **`docs/DEMO.md`** + **`docs/DEFENSE_GUIDE.md`** — chuẩn bị bảo vệ
+5. Read **`CONTRIBUTING.md`** — branch naming & conventions
+6. Run `cp .env.example .env && make up`

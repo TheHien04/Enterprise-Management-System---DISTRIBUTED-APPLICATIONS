@@ -1,26 +1,53 @@
 # CODEOWNERS — default reviewers per area
-# Update GitHub usernames when team joins the repo
+# GitHub usernames: cập nhật khi team join repo
+# Phân công chi tiết: docs/TEAM_ASSIGNMENT.md
 
-# Platform & gateway
-/backend/gateway/                    @team-lead
-/backend/libs/udpt_common/           @team-lead
-/docker-compose.yml                  @team-lead
-/infra/                              @team-lead
-/Makefile                            @team-lead
+# Nguyen The Hien — platform, contract, FE core, infra (phụ trách chính)
+/backend/gateway/                    @TheHien04
+/backend/libs/udpt_common/           @TheHien04
+/backend/services/contract-service/  @TheHien04
+/backend/tests/                      @TheHien04
+/docker-compose.yml                  @TheHien04
+/infra/                              @TheHien04
+/Makefile                            @TheHien04
+/config/state_machines.json          @TheHien04
+/config/seed_data.json               @TheHien04
+/docs/                               @TheHien04
+/README.md                           @TheHien04
+/CONTRIBUTING.md                     @TheHien04
+/frontend/src/components/layout/     @TheHien04
+/frontend/src/pages/dashboard/       @TheHien04
+/frontend/src/pages/exceptions/      @TheHien04
+/frontend/src/pages/customers/       @TheHien04
+/frontend/src/pages/contracts/       @TheHien04
+/frontend/src/context/               @TheHien04
+/frontend/src/routes/                @TheHien04
+/frontend/src/config/rbac.ts         @TheHien04
+/frontend/src/api/client.ts          @TheHien04
+/frontend/src/styles/                @TheHien04
 
-# Domain services — assign one owner per service
-/backend/services/contract-service/  @member-contract
-/backend/services/pricing-service/   @member-pricing
-/backend/services/operation-service/ @member-operations
-/backend/services/billing-service/   @member-billing
-/backend/services/workflow-service/  @member-workflow
-/backend/services/notification-service/ @member-platform
-/backend/services/audit-service/     @member-platform
-/backend/services/esign-service/     @member-platform
+# Bui Le Khoi — billing, workflow, FE billing/approvals (phụ trách chính)
+/backend/services/billing-service/   @blkhoi22
+/backend/services/workflow-service/  @blkhoi22
+/config/workflow_definitions.json    @blkhoi22
+/frontend/src/pages/billing/         @blkhoi22
+/frontend/src/pages/approvals/       @blkhoi22
 
-# Frontend
-/frontend/                           @member-frontend
+# Le Quang Tan — pricing, operation
+/backend/services/pricing-service/   @TanaLQ098
+/backend/services/operation-service/ @TanaLQ098
+/frontend/src/pages/pricing/         @TanaLQ098
+/frontend/src/pages/operations/      @TanaLQ098
 
-# Shared config & docs
-/config/                             @team-lead
-/docs/                               @team-lead
+# Nguyen Minh Hieu — support services + 3 FE pages (phạm vi thu hẹp)
+/backend/services/notification-service/ @hieu251103
+/backend/services/audit-service/        @hieu251103
+/backend/services/esign-service/        @hieu251103
+/frontend/src/pages/notifications/        @hieu251103
+/frontend/src/pages/audit/                @hieu251103
+/frontend/src/pages/esign/                @hieu251103
+
+# Shared frontend (review Hien + module owner)
+/frontend/src/components/ui/       @TheHien04
+/frontend/src/i18n/                @TheHien04
+/frontend/src/api/modules.ts       @TheHien04 @blkhoi22 @TanaLQ098 @hieu251103

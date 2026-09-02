@@ -2,24 +2,29 @@
 
 File này giúp mỗi thành viên **tìm đúng folder trong 30 giây**.
 
-Mỗi dòng liên kết: **Use case → Service → Folder → Gateway route → Port**.
+Mỗi dòng liên kết: **Use case → Service → Folder → Gateway route → Port → Owner**.
+
+Phân công chi tiết: **[TEAM_ASSIGNMENT.md](./TEAM_ASSIGNMENT.md)**
 
 ---
 
 ## Quick index
 
-| Nếu bạn làm… | Folder | Gateway route | Port |
-|--------------|--------|---------------|------|
-| Khách hàng, HĐ, phụ lục | `backend/services/contract-service/` | `/api/v1/customers`, `/api/v1/contracts` | 8001 |
-| Catalog, bảng giá | `backend/services/pricing-service/` | `/api/v1/pricing/*` | 8002 |
-| Sản lượng, khóa kỳ | `backend/services/operation-service/` | `/api/v1/operations/*` | 8003 |
-| Bảng kê, điều chỉnh | `backend/services/billing-service/` | `/api/v1/billing/*` | 8004 |
-| Engine phê duyệt | `backend/services/workflow-service/` | `/api/v1/workflows/*` | 8005 |
-| Thông báo | `backend/services/notification-service/` | `/api/v1/notifications/*` | 8006 |
-| Audit log | `backend/services/audit-service/` | `/api/v1/audit/*` | 8007 |
-| Ký số | `backend/services/esign-service/` | `/api/v1/esign/*` | 8008 |
-| Login, JWT, proxy | `backend/gateway/` | `/api/v1/auth/login` | 8080 |
-| Web UI | `frontend/src/pages/` | — | 5173 |
+| Nếu bạn làm… | Folder | Gateway route | Port | Owner |
+|--------------|--------|---------------|------|-------|
+| Khách hàng, HĐ, phụ lục | `backend/services/contract-service/` | `/api/v1/customers`, `/api/v1/contracts` | 8001 | **Hien** |
+| Catalog, bảng giá | `backend/services/pricing-service/` | `/api/v1/pricing/*` | 8002 | **Tan** |
+| Sản lượng, khóa kỳ | `backend/services/operation-service/` | `/api/v1/operations/*` | 8003 | **Tan** |
+| Bảng kê, điều chỉnh | `backend/services/billing-service/` | `/api/v1/billing/*` | 8004 | **Khoi** |
+| Engine phê duyệt | `backend/services/workflow-service/` | `/api/v1/workflows/*` | 8005 | **Khoi** |
+| Thông báo | `backend/services/notification-service/` | `/api/v1/notifications/*` | 8006 | **Hieu** |
+| Audit log | `backend/services/audit-service/` | `/api/v1/audit/*` | 8007 | **Hieu** |
+| Ký số | `backend/services/esign-service/` | `/api/v1/esign/*` | 8008 | **Hieu** |
+| Login, JWT, proxy | `backend/gateway/` | `/api/v1/auth/login` | 8080 | **Hien** |
+| Web UI (core) | `frontend/src/pages/` | — | 5173 | **Hien** (layout, dashboard, contracts…) |
+| Web UI (billing/approvals) | `frontend/src/pages/billing/`, `approvals/` | — | 5173 | **Khoi** |
+| Web UI (pricing/ops) | `frontend/src/pages/pricing/`, `operations/` | — | 5173 | **Tan** |
+| Web UI (notify/audit/esign) | `frontend/src/pages/notifications/`, `audit/`, `esign/` | — | 5173 | **Hieu** |
 
 ---
 
