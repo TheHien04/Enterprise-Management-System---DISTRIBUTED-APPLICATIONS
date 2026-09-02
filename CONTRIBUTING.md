@@ -39,8 +39,8 @@ Hướng dẫn cho thành viên nhóm khi clone repo, chọn module, commit và 
 |------------|------|-------------|--------|
 | Nguyen The Hien | 22127107 | **Phụ trách chính** — Gateway, Contract, `udpt_common`, infra, FE core | `backend/gateway/`, `contract-service/`, `libs/udpt_common/`, FE layout/auth/dashboard/contracts/customers/exceptions |
 | Bui Le Khoi | 22127205 | **Phụ trách chính** — Billing, Workflow, FE billing/approvals | `billing-service/`, `workflow-service/`, `pages/billing/`, `pages/approvals/` |
-| Le Quang Tan | 22127378 | Pricing, Operation, FE pricing/ops | `pricing-service/`, `operation-service/`, `pages/pricing/`, `pages/operations/` |
-| Nguyen Minh Hieu | 21127742 | *Phạm vi thu hẹp* — Notification, Audit, E-Sign + 3 màn FE | `notification-service/`, `audit-service/`, `esign-service/`, `pages/notifications/`, `audit/`, `esign/` |
+| Le Quang Tan | 22127378 | Pricing, Operation, Notification, E-Sign, FE tương ứng | `pricing-service/`, `operation-service/`, `notification-service/`, `esign-service/`, `pages/pricing/`, `operations/`, `notifications/`, `esign/` |
+| Nguyen Minh Hieu | 21127742 | *Phạm vi thu hẹp nhất* — Audit | `audit-service/`, `pages/audit/` |
 
 **Shared (cả team):**
 

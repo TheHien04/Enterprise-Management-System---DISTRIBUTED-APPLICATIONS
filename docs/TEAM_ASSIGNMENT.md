@@ -12,10 +12,10 @@ Tài liệu này mô tả **ai làm gì**, **folder nào**, **deliverable bảo 
 |------------|------|-------|--------|---------|
 | **Nguyen The Hien** | 22127107 | *(owner)* | **Phụ trách chính — khối lượng lớn nhất** | Tech lead: Gateway, Contract, platform, FE core, tích hợp toàn hệ thống |
 | **Bui Le Khoi** | 22127205 | blkhoi22@clc.fitus.edu.vn | **Phụ trách chính — khối lượng lớn** | Billing, Workflow, FE billing/approvals, cấu hình phê duyệt |
-| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Phụ trách module | Pricing, Operation, FE pricing/ops |
-| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | **Phạm vi thu hẹp** | Notification, Audit, E-Sign (backend async) + 3 màn FE tương ứng |
+| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Phụ trách module (mở rộng) | Pricing, Operation, **Notification, E-Sign**, FE pricing/ops/notify/esign |
+| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | **Phạm vi thu hẹp nhất** | Audit (backend Kafka consumer + màn Audit admin) |
 
-**Ghi chú:** Hien và Khoi owner nhiều module backend + frontend core; Hieu tập trung 3 service hỗ trợ Kafka và 3 trang UI liên quan, không phụ trách toàn bộ frontend hay kiến trúc hệ thống.
+**Ghi chú:** Hien và Khoi owner nhiều module backend + frontend core. Tan nhận thêm Notification + E-Sign (chuyển từ Hieu). Hieu chỉ còn Audit — không phụ trách toàn bộ frontend hay kiến trúc hệ thống.
 
 ---
 
@@ -89,20 +89,19 @@ SC-03, SC-04, SC-05, SC-06, SC-09 (`backend/tests/integration/test_scenarios.py`
 |-----|--------|
 | Billing list + detail + wizard | `pages/billing/` |
 | Approvals inbox + SLA | `pages/approvals/` |
-| E-sign list (tích hợp billing) | `pages/esign/` (flow billing → esign) |
-| API | `workflowsApi`, `billingApi`, `esignApi` trong `modules.ts` |
+| API | `workflowsApi`, `billingApi` trong `modules.ts` (tích hợp esign: phối hợp Tan) |
 
 ### Deliverable khi bảo vệ (Khoi nói)
 
 1. Workflow **config-driven** — không hard-code if/else theo loại tài liệu
 2. APR-01: role + `current_assignee_user_id` — demo `sale02` → 403
 3. Billing: chọn giá EFFECTIVE, snapshot sau approve SC-04
-4. E-sign FAILED giữ APPROVED, retry PAY-07
+4. Billing gọi esign (phối hợp Tan) — FAILED giữ APPROVED, retry PAY-07
 5. Demo: `manager01`/`legal01` Approvals → `account01` billing → print
 
 ---
 
-## 3. Le Quang Tan — Pricing & Operations
+## 3. Le Quang Tan — Pricing, Operations & Async UX
 
 ### Backend — owner chính
 
@@ -110,6 +109,8 @@ SC-03, SC-04, SC-05, SC-06, SC-09 (`backend/tests/integration/test_scenarios.py`
 |--------|--------|----------------|
 | **Pricing Service** | `backend/services/pricing-service/` | UC-04 catalog, bảng giá, PRC-01→06, overlap SC-02, supersede |
 | **Operation Service** | `backend/services/operation-service/` | UC-05 sản lượng, khóa kỳ VOL-01→04, PATCH volume trước LOCKED |
+| **Notification Service** | `backend/services/notification-service/` | UC-09 Kafka consumer → `notifications`, API list/mark read |
+| **E-Sign Service** | `backend/services/esign-service/` | UC-08 phiên ký async, callback billing `complete-esign` |
 
 ### Config — contributor
 
@@ -118,49 +119,53 @@ SC-03, SC-04, SC-05, SC-06, SC-09 (`backend/tests/integration/test_scenarios.py`
 | `config/state_machines.json` | `price_list`, `volume_period` |
 | `config/seed_data.json` | Price v1/v2, volumes Aug/Sep |
 
+### Integration tests — hỗ trợ
+
+SC-06 (esign), SC-07 (notification health) — phối hợp Khoi/Hien khi cần
+
 ### Frontend — owner
 
 | Màn | Folder |
 |-----|--------|
 | Price lists + compare | `pages/pricing/` |
 | Volumes + period chips | `pages/operations/VolumesPage.tsx` |
-| API | `pricingApi`, `operationsApi` trong `modules.ts` |
+| Notifications | `pages/notifications/` |
+| E-Sign | `pages/esign/EsignPage.tsx` |
+| API | `pricingApi`, `operationsApi`, `notificationsApi`, `esignApi` trong `modules.ts` |
+| i18n | Keys `pricing.*`, `operations.*`, `notifications.*`, `esign.*` |
 
 ### Deliverable khi bảo vệ (Tan nói)
 
 1. PRC-03 overlap → 409; PRC-05 supersede EFFECTIVE cũ
 2. Kỳ OPEN → RECONCILED → LOCKED; sửa qty trước khóa
-3. Demo: so sánh bảng giá v1/v2; ops khóa kỳ + tổng sản lượng
+3. Notification: Kafka consumer + chuông topbar (poll)
+4. E-sign async + callback billing (SC-06)
+5. Demo: pricing compare → ops volumes → chuông notification → esign session
 
 ---
 
-## 4. Nguyen Minh Hieu — Support Services *(phạm vi thu hẹp)*
+## 4. Nguyen Minh Hieu — Audit *(phạm vi thu hẹp nhất)*
 
-> Phạm vi **thu hẹp**: 3 microservice hỗ trợ async + **3 màn FE tương ứng**. Không owner toàn bộ frontend.
+> Chỉ owner **Audit Service** + **màn Audit admin**. Notification và E-Sign đã chuyển sang Tan.
 
 ### Backend — owner
 
 | Module | Folder | UC / nhiệm vụ |
 |--------|--------|----------------|
-| **Notification Service** | `backend/services/notification-service/` | UC-09 Kafka consumer → `notifications`, API list/mark read |
 | **Audit Service** | `backend/services/audit-service/` | UC-10 consumer → `audit_logs` bất biến, API query theo entity |
-| **E-Sign Service** | `backend/services/esign-service/` | UC-08 phiên ký async, callback billing `complete-esign` |
 
-### Frontend — owner (chỉ 3 module)
+### Frontend — owner
 
 | Màn | Folder |
 |-----|--------|
-| Notifications | `pages/notifications/` |
 | Audit (admin) | `pages/audit/AuditPage.tsx` |
-| E-Sign | `pages/esign/EsignPage.tsx` (UI list/session; flow billing do Khoi) |
-| i18n | Keys `notifications.*`, `audit.*`, `esign.*` trong `messages.ts` |
+| i18n | Keys `audit.*` trong `messages.ts` |
 
-### Deliverable khi bảo vệ (Hieu nói)
+### Deliverable khi bảo vệ (Hieu nói — ~1–2 phút)
 
-1. Kafka consumer: Notification + Audit nhận event từ outbox relay
-2. Audit immutable — GET scoped; admin page director only
-3. E-sign async + callback billing
-4. Demo: chuông notification; `director01` trang Audit
+1. Audit immutable — ghi qua Kafka consumer + `log_audit()` HTTP
+2. GET scoped theo entity (Activity timeline); trang admin director only
+3. Demo: `director01` → trang **Audit** → lọc theo entity
 
 ---
 
@@ -187,8 +192,8 @@ SC-03, SC-04, SC-05, SC-06, SC-09 (`backend/tests/integration/test_scenarios.py`
 | UC-05 Operations | Tan | — |
 | UC-06 Billing | Khoi | Tan (volume), Hien (contract) |
 | UC-07 Workflow | Khoi | Hien (gateway) |
-| UC-08 E-Sign | Hieu | Khoi (billing) |
-| UC-09 Notification | Hieu | Khoi (outbox emit) |
+| UC-08 E-Sign | Tan | Khoi (billing trigger) |
+| UC-09 Notification | Tan | Khoi (outbox emit) |
 | UC-10 Audit | Hieu | Hien (audit_helper) |
 
 ---
@@ -199,8 +204,21 @@ SC-03, SC-04, SC-05, SC-06, SC-09 (`backend/tests/integration/test_scenarios.py`
 |--------------|-------------------|
 | Gateway, contract, udpt_common core, infra | **Hien** |
 | Billing, workflow | **Khoi** |
-| Pricing, operation | **Tan** |
-| Notification, audit, esign | **Hieu** |
+| Pricing, operation, notification, esign | **Tan** |
+| Audit | **Hieu** |
 | `config/*.json` | Owner UC + **Hien** |
 
 Chi tiết Git: [CONTRIBUTING.md](../CONTRIBUTING.md) · Bản đồ file: [SERVICE_MAP.md](./SERVICE_MAP.md)
+
+---
+
+## 8. Gợi ý thời lượng vấn đáp (tránh Hien/Khoi nói quá dài)
+
+| Thành viên | Thời gian nói | Nói gì (ngắn) |
+|------------|---------------|---------------|
+| **Hien** | ~2,5 phút | Kiến trúc + gateway + outbox + demo sale01/contract (**không** liệt kê từng file) |
+| **Khoi** | ~2,5 phút | Workflow JSON + billing snapshot + demo approvals (**không** đọc code) |
+| **Tan** | ~2 phút | Pricing/ops + notification/esign |
+| **Hieu** | ~1 phút | Chỉ audit immutable + demo director01 |
+
+Cả nhóm ~8 phút; phần code nhiều ≠ phải nói nhiều — mỗi người **3 ý + 1 demo click**.

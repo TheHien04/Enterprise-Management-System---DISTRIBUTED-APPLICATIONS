@@ -33,19 +33,19 @@
 /frontend/src/pages/billing/         @blkhoi22
 /frontend/src/pages/approvals/       @blkhoi22
 
-# Le Quang Tan — pricing, operation
-/backend/services/pricing-service/   @TanaLQ098
-/backend/services/operation-service/ @TanaLQ098
-/frontend/src/pages/pricing/         @TanaLQ098
-/frontend/src/pages/operations/      @TanaLQ098
+# Le Quang Tan — pricing, operation, notification, esign
+/backend/services/pricing-service/      @TanaLQ098
+/backend/services/operation-service/    @TanaLQ098
+/backend/services/notification-service/   @TanaLQ098
+/backend/services/esign-service/          @TanaLQ098
+/frontend/src/pages/pricing/              @TanaLQ098
+/frontend/src/pages/operations/           @TanaLQ098
+/frontend/src/pages/notifications/        @TanaLQ098
+/frontend/src/pages/esign/                @TanaLQ098
 
-# Nguyen Minh Hieu — support services + 3 FE pages (phạm vi thu hẹp)
-/backend/services/notification-service/ @hieu251103
-/backend/services/audit-service/        @hieu251103
-/backend/services/esign-service/        @hieu251103
-/frontend/src/pages/notifications/        @hieu251103
-/frontend/src/pages/audit/                @hieu251103
-/frontend/src/pages/esign/                @hieu251103
+# Nguyen Minh Hieu — audit only (phạm vi thu hẹp nhất)
+/backend/services/audit-service/     @hieu251103
+/frontend/src/pages/audit/           @hieu251103
 
 # Shared frontend (review Hien + module owner)
 /frontend/src/components/ui/       @TheHien04

@@ -89,8 +89,8 @@ Chi tiết deliverable, ma trận UC → owner: **[docs/TEAM_ASSIGNMENT.md](./do
 |------------|------|-------|-------------|--------------|
 | **Nguyen The Hien** | 22127107 | *(owner)* | **Phụ trách chính** — Gateway, Contract, `udpt_common`, infra, FE core, tích hợp | `backend/gateway/`, `contract-service/`, `libs/udpt_common/`, FE layout/auth/dashboard/contracts/customers/exceptions |
 | **Bui Le Khoi** | 22127205 | blkhoi22@clc.fitus.edu.vn | **Phụ trách chính** — Billing, Workflow, FE billing/approvals, workflow config | `billing-service/`, `workflow-service/`, `pages/billing/`, `pages/approvals/` |
-| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Pricing, Operation, FE pricing/ops | `pricing-service/`, `operation-service/`, `pages/pricing/`, `operations/` |
-| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | *Phạm vi thu hẹp* — Notification, Audit, E-Sign + 3 màn FE | `notification-service/`, `audit-service/`, `esign-service/`, `pages/notifications/`, `audit/`, `esign/` |
+| **Le Quang Tan** | 22127378 | TanaLQ098@gmail.com | Pricing, Operation, **Notification, E-Sign**, FE tương ứng | `pricing-service/`, `operation-service/`, `notification-service/`, `esign-service/`, `pages/pricing/`, `operations/`, `notifications/`, `esign/` |
+| **Nguyen Minh Hieu** | 21127742 | hieu251103@gmail.com | *Phạm vi thu hẹp nhất* — **Audit** | `audit-service/`, `pages/audit/` |
 
 > Script demo bảo vệ: [docs/DEMO.md](./docs/DEMO.md) · Q&A vấn đáp: [docs/DEFENSE_GUIDE.md](./docs/DEFENSE_GUIDE.md) · Luồng xử lý: [docs/REQUEST_FLOWS.md](./docs/REQUEST_FLOWS.md)
 
@@ -340,8 +340,8 @@ Xem script đầy đủ theo từng thành viên: **[docs/DEMO.md](./docs/DEMO.m
 
 1. **Hien** — `sale01` → Dashboard/Exceptions → Contract → Activity timeline  
 2. **Khoi** — `manager01`/`legal01` Approvals → `account01` Billing print  
-3. **Tan** — `ops01` Volumes khóa kỳ; (tuỳ chọn) Pricing compare  
-4. **Hieu** — `director01` Audit + Notifications  
+3. **Tan** — `ops01` Volumes; notification/esign; (tuỳ chọn) Pricing compare  
+4. **Hieu** — `director01` Audit  
 5. Toggle Dark mode + VI/EN trên topbar  
 
 ---

@@ -17,14 +17,15 @@ Phân công chi tiết: **[TEAM_ASSIGNMENT.md](./TEAM_ASSIGNMENT.md)**
 | Sản lượng, khóa kỳ | `backend/services/operation-service/` | `/api/v1/operations/*` | 8003 | **Tan** |
 | Bảng kê, điều chỉnh | `backend/services/billing-service/` | `/api/v1/billing/*` | 8004 | **Khoi** |
 | Engine phê duyệt | `backend/services/workflow-service/` | `/api/v1/workflows/*` | 8005 | **Khoi** |
-| Thông báo | `backend/services/notification-service/` | `/api/v1/notifications/*` | 8006 | **Hieu** |
+| Thông báo | `backend/services/notification-service/` | `/api/v1/notifications/*` | 8006 | **Tan** |
 | Audit log | `backend/services/audit-service/` | `/api/v1/audit/*` | 8007 | **Hieu** |
-| Ký số | `backend/services/esign-service/` | `/api/v1/esign/*` | 8008 | **Hieu** |
+| Ký số | `backend/services/esign-service/` | `/api/v1/esign/*` | 8008 | **Tan** |
 | Login, JWT, proxy | `backend/gateway/` | `/api/v1/auth/login` | 8080 | **Hien** |
 | Web UI (core) | `frontend/src/pages/` | — | 5173 | **Hien** (layout, dashboard, contracts…) |
 | Web UI (billing/approvals) | `frontend/src/pages/billing/`, `approvals/` | — | 5173 | **Khoi** |
 | Web UI (pricing/ops) | `frontend/src/pages/pricing/`, `operations/` | — | 5173 | **Tan** |
-| Web UI (notify/audit/esign) | `frontend/src/pages/notifications/`, `audit/`, `esign/` | — | 5173 | **Hieu** |
+| Web UI (notify/esign) | `frontend/src/pages/notifications/`, `esign/` | — | 5173 | **Tan** |
+| Web UI (audit) | `frontend/src/pages/audit/` | — | 5173 | **Hieu** |
 
 ---
 

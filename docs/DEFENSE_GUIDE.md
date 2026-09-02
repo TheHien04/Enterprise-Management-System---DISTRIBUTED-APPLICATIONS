@@ -127,9 +127,9 @@ Chạy: `pytest backend/tests/integration/test_scenarios.py -v`
 
 | Thành viên | Phần nói |
 |------------|----------|
-| **Hien** | Kiến trúc, gateway, contract, outbox, DB-per-service |
-| **Khoi** | Workflow, billing, approvals, SC-04/05/06 |
-| **Tan** | Pricing overlap, operation khóa kỳ |
-| **Hieu** | Kafka consumer, audit, notification, esign |
+| **Hien** | Kiến trúc, gateway, contract, outbox, DB-per-service (~2,5 phút) |
+| **Khoi** | Workflow, billing, approvals, SC-04/05 (~2,5 phút) |
+| **Tan** | Pricing, ops, notification, esign (~2 phút) |
+| **Hieu** | Audit only (~1 phút) |
 
 Script demo: [DEMO.md](./DEMO.md)

@@ -31,9 +31,8 @@ Hard refresh trình duyệt: **Cmd+Shift+R**.
 | 1:15 | **Khoi** | Logout → `manager01` → **Approvals** → filter **Urgent** | "Workflow JSON 5 bước; SLA >24h highlight." |
 | 1:35 | Khoi | Approve 1 item (comment nếu cần) | "Optimistic lock version; outbox → Kafka → notification." |
 | 1:50 | Khoi | Logout → `account01` → **Billing** → mở sheet → **Print/CSV** | "snapshot_unit_price SC-04; billing service DB riêng." |
-| 2:10 | **Tan** | `ops01` → **Operations** → chip OPEN/LOCKED, tổng qty | "Operation service; khóa kỳ trước khi billing." |
-| 2:25 | Tan | (Tuỳ chọn) **Pricing** → compare 2 version | "PRC overlap/supersede SC-02." |
-| 2:40 | **Hieu** | `director01` → **Audit** + chuông **Notifications** | "Kafka consumer ghi audit/notification; admin audit director only." |
+| 2:10 | **Tan** | `ops01` → **Operations**; chuông **Notifications**; **E-sign** | "Pricing/ops + Kafka notification + esign callback." |
+| 2:35 | **Hieu** | `director01` → **Audit** | "Audit immutable; admin query director only." |
 | 2:55 | Hien | Toggle **Dark** + **VI/EN** topbar | "i18n 500+ keys; portal enterprise logistics." |
 
 ---
@@ -61,8 +60,8 @@ Hard refresh trình duyệt: **Cmd+Shift+R**.
 | sale01 | SALES_STAFF | KH, HĐ, Pricing, Approvals | Hien |
 | manager01 | SALES_MANAGER | Approvals | Khoi |
 | legal01 | LEGAL | HĐ, Approvals | Khoi |
-| ops01 | OPERATIONS | Volumes | Tan |
-| account01 | ACCOUNTING | Billing, E-sign, Approvals | Khoi |
+| ops01 | OPERATIONS | Volumes, Notifications, E-sign | Tan |
+| account01 | ACCOUNTING | Billing, Approvals | Khoi |
 | director01 | DIRECTOR | Audit, oversight | Hieu |
 | admin01 | ADMIN | Full + Admin | Hien |
 
