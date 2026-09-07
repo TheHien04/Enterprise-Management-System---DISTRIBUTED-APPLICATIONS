@@ -1,190 +1,226 @@
-# Logistics ABC — Enterprise Business Management System
+# Enterprise Business Management System for Logistics ABC
 
-[![Course](https://img.shields.io/badge/Course-UDPT-0ea5e9)](docs/UDPT.pdf)
-[![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20Kafka-14b8a6)](docs/ARCHITECTURE.md)
-[![Architecture](https://img.shields.io/badge/Architecture-8%20Microservices-64748b)](docs/SERVICE_MAP.md)
-[![Tests](https://img.shields.io/badge/Tests-SC--01%E2%80%93SC--10-22c55e)](backend/tests/integration/test_scenarios.py)
+A distributed enterprise application for commercial logistics operations: customer master data, contract lifecycle, configurable multi-step approval, pricing versions, operational volumes, billing sheets with immutable price snapshots, asynchronous e-signing, notifications, and immutable audit trails.
 
-Hệ thống **quản trị kinh doanh phân tán** cho **Logistics ABC Corporation** — môn **Ứng dụng phân tán (UDPT)**.
+This repository is the implementation artefact for the **Distributed Applications (UDPT)** course project. The system is organised as a monorepo of eight FastAPI microservices behind a single API Gateway, a React operator portal, and supporting infrastructure (PostgreSQL, Redis, Kafka, MinIO), provisioned locally with Docker Compose and optionally with Kubernetes manifests.
 
-Monorepo gồm **8 microservices FastAPI**, **API Gateway**, **React/Vite frontend**, **PostgreSQL (database-per-service)**, **Redis**, **Kafka**, **MinIO** — chạy local bằng Docker Compose, có sẵn Kubernetes manifests.
-
-**Report (báo cáo):** [`docs/UDPT-09-Report.pdf`](docs/UDPT-09-Report.pdf)  
-**Repository:** [TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS](https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS)
-
----
-
-## Mục lục
-
-- [Tính năng](#tính-năng)
-- [Kiến trúc](#kiến-trúc)
-- [Giao diện & chức năng](#giao-diện--chức-năng)
-- [Luồng nghiệp vụ (sequence)](#luồng-nghiệp-vụ-sequence)
-- [Team & phân công](#team--phân-công)
-- [Quick Start](#quick-start)
-- [Tài khoản demo](#tài-khoản-demo)
-- [Testing](#testing)
-- [Tài liệu](#tài-liệu)
+| Artefact | Location |
+|----------|----------|
+| Project report | [docs/UDPT-09-Report.pdf](docs/UDPT-09-Report.pdf) |
+| Architecture notes | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Service / UC map | [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md) |
+| Team ownership | [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md) |
+| Remote repository | [GitHub](https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS) |
 
 ---
 
-## Tính năng
+## Contents
 
-| UC | Mô tả | Trạng thái |
-|----|--------|------------|
-| UC-01 | Quản lý khách hàng | ✅ |
-| UC-02 | Vòng đời hợp đồng + phê duyệt 5 bước | ✅ |
-| UC-03 | Phụ lục hợp đồng | ✅ |
-| UC-04 | Bảng giá (overlap, supersede, version) | ✅ |
-| UC-05 | Sản lượng & khóa kỳ | ✅ |
-| UC-06 | Bảng kê thanh toán + snapshot giá | ✅ |
-| UC-07 | Workflow engine JSON + assignee theo user | ✅ |
-| UC-08 | Ký số điện tử (async + retry) | ✅ |
-| UC-09 | Thông báo Kafka + cảnh báo hết hạn | ✅ |
-| UC-10 | Audit log + outbox + idempotency + rate limit | ✅ |
-
-**Điểm kỹ thuật nổi bật:** API Gateway (JWT/RBAC), transactional outbox → Kafka, state machine & workflow cấu hình JSON, RBAC 2 lớp (FE + Gateway), i18n VI/EN, dark mode.
+1. [Research context](#1-research-context)
+2. [System capabilities](#2-system-capabilities)
+3. [Distributed architecture](#3-distributed-architecture)
+4. [Operator interface](#4-operator-interface)
+5. [Inter-service interaction patterns](#5-inter-service-interaction-patterns)
+6. [Team structure](#6-team-structure)
+7. [Reproduction](#7-reproduction)
+8. [Evaluation scenarios](#8-evaluation-scenarios)
+9. [References](#9-references)
 
 ---
 
-## Kiến trúc
+## 1. Research context
+
+Enterprise logistics platforms require clear service boundaries, reliable cross-cutting concerns (authentication, authorisation, audit), and eventual consistency for side effects such as notifications. This project applies established distributed-systems patterns in a bounded commercial domain (BMS for a fictional Logistics ABC entity operating in a Singapore / ASEAN logistics context):
+
+- **Database-per-service** — each bounded context owns its schema; cross-context joins are forbidden.
+- **API Gateway as single entry point** — JWT validation, role-based access control, rate limiting, and idempotency.
+- **Config-driven state machines and workflows** — lifecycle transitions and approval chains are declared in JSON rather than hard-coded conditionals.
+- **Transactional outbox** — domain events are persisted with business data and relayed to Kafka asynchronously.
+- **Synchronous REST** for request/response business orchestration; **asynchronous messaging** for notification and audit fan-out.
+
+The implementation is intentionally a course-scale demonstration: production concerns such as SSO, full TMS/WMS, and multi-region disaster recovery are out of scope.
+
+---
+
+## 2. System capabilities
+
+| ID | Capability | Status |
+|----|------------|--------|
+| UC-01 | Enterprise customer management | Implemented |
+| UC-02 | Contract lifecycle with five-step approval | Implemented |
+| UC-03 | Contract appendices | Implemented |
+| UC-04 | Service price lists (overlap detection, supersede) | Implemented |
+| UC-05 | Operational volumes and period locking | Implemented |
+| UC-06 | Billing sheets with unit-price snapshot | Implemented |
+| UC-07 | Configurable workflow engine with user-level assignees | Implemented |
+| UC-08 | Asynchronous e-signing with retry | Implemented |
+| UC-09 | Event-driven notifications and expiry warnings | Implemented |
+| UC-10 | Immutable audit trail, outbox, idempotency, rate limit | Implemented |
+
+Representative business rules exercised by integration scenarios SC-01–SC-10 include attachment-required contract submit (CTR-02), price-list overlap rejection (PRC-03), billing price snapshot immutability (SC-04), concurrent approval conflict (SC-05), and assignee-user enforcement (APR-01 / SC-08).
+
+---
+
+## 3. Distributed architecture
 
 ```
-┌──────────────┐     HTTP      ┌─────────────┐
-│   Frontend   │ ────────────► │ API Gateway │  :8080  JWT · RBAC · Idempotency
-│  React/Vite  │               └──────┬──────┘
-│    :5173     │                      │
-└──────────────┘        ┌─────────────┼─────────────┐
-                        ▼             ▼             ▼
-                  Contract:8001  Workflow:8005  Billing:8004
-                  Pricing:8002   Notify:8006    Operation:8003
-                                 Audit:8007     E-Sign:8008
-                        │             │             │
-                        └────── PostgreSQL ─ Redis ─ Kafka ─ MinIO
-                              (database-per-service)
+Client (React :5173)
+        |
+        |  HTTP + Bearer JWT
+        v
+API Gateway (:8080)
+  JWT · RBAC · rate limit · idempotency · reverse proxy
+        |
+        +-- Contract (:8001)     -> contract_db
+        +-- Pricing (:8002)      -> pricing_db
+        +-- Operation (:8003)    -> operation_db
+        +-- Billing (:8004)      -> billing_db
+        +-- Workflow (:8005)     -> workflow_db
+        +-- Notification (:8006) -> support_db
+        +-- Audit (:8007)        -> support_db
+        +-- E-Sign (:8008)       -> support_db
+        |
+        +-- PostgreSQL · Redis · Kafka · MinIO
 ```
 
-| Service | Port | Database | Trách nhiệm |
-|---------|------|----------|-------------|
-| **API Gateway** | 8080 | — | JWT, routing, RBAC, rate limit, idempotency |
-| **Contract** | 8001 | `contract_db` | Khách hàng, HĐ, phụ lục, attachment |
-| **Pricing** | 8002 | `pricing_db` | Catalog, bảng giá |
-| **Operation** | 8003 | `operation_db` | Sản lượng, khóa kỳ |
-| **Billing** | 8004 | `billing_db` | Bảng kê, điều chỉnh, snapshot giá |
-| **Workflow** | 8005 | `workflow_db` | Engine phê duyệt đa cấp |
-| **Notification** | 8006 | `support_db` | Thông báo async (Kafka) |
-| **Audit** | 8007 | `support_db` | Nhật ký bất biến (Kafka) |
-| **E-Sign** | 8008 | `support_db` | Phiên ký số |
+| Component | Port | Persistence | Responsibility |
+|-----------|------|-------------|----------------|
+| API Gateway | 8080 | Redis (rate limit, idempotency) | Authentication, authorisation, routing |
+| Contract Service | 8001 | `contract_db` | Customers, contracts, appendices, attachments |
+| Pricing Service | 8002 | `pricing_db` | Service catalogue and price-list versions |
+| Operation Service | 8003 | `operation_db` | Billing periods and volume records |
+| Billing Service | 8004 | `billing_db` | Billing sheets, adjustments, price snapshots |
+| Workflow Service | 8005 | `workflow_db` | Approval instances, steps, action logs |
+| Notification Service | 8006 | `support_db` | User notifications (Kafka consumer) |
+| Audit Service | 8007 | `support_db` | Immutable audit logs (Kafka consumer) |
+| E-Sign Service | 8008 | `support_db` | Signing sessions and callbacks |
 
-Database schema (database-per-service):
+Logical database layout (database-per-service):
 
 ![Database schema overview](docs/screenshots/arch-overview.png)
 
-Chi tiết: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md)
+Gateway configuration maps public paths under `/api/v1/{service}/...` to container hostnames such as `http://contract-service:8001`. Browser clients use only `http://localhost:8080`.
 
 ---
 
-## Giao diện & chức năng
+## 4. Operator interface
 
-Ảnh UI lấy từ báo cáo đồ án (Figma / PortOps style). Client chỉ gọi **`http://localhost:8080`** (API Gateway).
+The React portal follows a dense enterprise (PortOps-inspired) layout with role-based navigation, bilingual copy (English / Vietnamese), and light/dark themes. Screenshots below are taken from the project report.
 
-### 1. Đăng nhập & RBAC — M01
+### 4.1 Authentication (M01)
 
-Portal đăng nhập tập trung: JWT, demo accounts theo phòng ban (Sale, Manager, Legal, Ops, Accounting, Director, Admin). Password = username.
+Centralised login issues a JWT carrying subject and roles. Demo credentials use `password = username` for classroom reproduction.
 
 ![Login](docs/screenshots/ui-01-login.png)
 
-### 2. Dashboard (control tower) — M02
+### 4.2 Dashboard (M02)
 
-Tổng quan theo role: inbox chờ duyệt, exceptions, draft HĐ, cảnh báo hết hạn ≤ 30 ngày, quick links và luồng end-to-end.
+Role-conditioned control tower: pending approvals, exception counts, draft contracts, expiry warnings within thirty days, and guided end-to-end flow steps.
 
 ![Dashboard](docs/screenshots/ui-02-dashboard.png)
 
-### 3. Khách hàng — UC-01 / M03
+### 4.3 Customers (UC-01 / M03)
 
-Master data khách hàng: tạo mã KH, tìm kiếm, trạng thái ACTIVE/SUSPEND. Chỉ KH ACTIVE mới submit hợp đồng (CTR-02).
+Customer master registration, directory search, and suspend actions. Only `ACTIVE` customers may be referenced when submitting contracts.
 
 ![Customers](docs/screenshots/ui-03-customers.png)
 
-### 4. Hợp đồng — UC-02 / M04
+### 4.4 Contracts (UC-02 / M04)
 
-Danh sách & chi tiết HĐ: pipeline trạng thái (DRAFT → UNDER_REVIEW → APPROVED → ACTIVE), attachment bắt buộc trước submit, timeline workflow + activity audit.
+Contract list and detail with lifecycle pipeline (`DRAFT` to `ACTIVE`), mandatory attachments before submit, workflow progress, and entity activity timeline.
 
 ![Contracts](docs/screenshots/ui-04-contracts.png)
 
-### 5. Bảng giá — UC-04 / M05
+### 4.5 Price lists (UC-04 / M05)
 
-Catalog giá theo version/effective period; kiểm overlap (PRC-03 → 409), supersede version cũ, so sánh phiên bản.
+Versioned effective periods, overlap validation, supersede of prior effective lists, and version comparison.
 
 ![Price lists](docs/screenshots/ui-05-price-lists.png)
 
-### 6. Sản lượng & khóa kỳ — UC-05 / M06
+### 4.6 Volumes and periods (UC-05 / M06)
 
-Nhập volume theo kỳ OPEN → RECONCILED → LOCKED. Sau khi khóa kỳ không sửa sản lượng (VOL-04) — dữ liệu đầu vào cho billing.
+Period states `OPEN` → `RECONCILED` → `LOCKED`. Quantity updates are rejected after lock; locked volumes feed billing generation.
 
 ![Volumes](docs/screenshots/ui-06-volumes.png)
 
-### 7. Bảng kê thanh toán — UC-06 / M07
+### 4.7 Billing (UC-06 / M07)
 
-Wizard Draft → Calculate → Reconcile → Submit: lấy volume + giá qua REST (không join DB), lưu **`snapshot_unit_price`** (SC-04), print/export statement, kích hoạt e-sign.
+Wizard over Draft → Calculate → Reconcile → Submit. Billing aggregates volumes and prices via inter-service REST calls, persists `snapshot_unit_price`, supports statement print/export, and triggers e-sign.
 
 ![Billing](docs/screenshots/ui-07-billing.png)
 
-### 8. Inbox phê duyệt — UC-07 / M08
+### 4.8 Approval inbox (UC-07 / M08)
 
-Approvals theo **role + assignee user** (APR-01): Approve / Reject / Request revision (comment bắt buộc). Filter All / Urgent / Mine, SLA chờ duyệt.
+Inbox filtered by assignee role and assignee user. Actions: approve, reject, request revision (comment required). Optimistic concurrency uses workflow `version`.
 
 ![Approvals](docs/screenshots/ui-08-approvals.png)
 
-### 9. Thông báo — UC-09 / M09
+### 4.9 Notifications (UC-09 / M09)
 
-Thông báo bất đồng bộ từ Outbox → Kafka → Notification Service; chuông topbar + danh sách / mark read.
+Asynchronous notifications delivered through the outbox–Kafka pipeline; unread badges and mark-as-read semantics in the portal.
 
 ![Notifications](docs/screenshots/ui-09-notifications.png)
 
-### 10. Audit log — UC-10 / M10
+### 4.10 Audit (UC-10 / M10)
 
-Nhật ký bất biến (Director/Admin). Entity Activity timeline trên Contract/Billing cho role nghiệp vụ (GET scoped).
+Immutable audit query UI for director/admin roles. Scoped entity timelines are available on contract and billing detail views for operational roles.
 
 ![Audit](docs/screenshots/ui-10-audit.png)
 
 ---
 
-## Luồng nghiệp vụ (sequence)
+## 5. Inter-service interaction patterns
 
-| Use case | Diagram |
-|----------|---------|
-| UC-01 Customer management | ![UC-01](docs/screenshots/seq-01-customers.png) |
-| UC-02 Contract lifecycle | ![UC-02](docs/screenshots/seq-02-contracts.png) |
-| UC-04 Price list | ![UC-04](docs/screenshots/seq-03-pricing.png) |
-| UC-05/06 Billing generation | ![Billing](docs/screenshots/seq-04-billing.png) |
-| UC-08 Async e-sign | ![E-Sign](docs/screenshots/seq-05-esign.png) |
-| UC-09/10 Notify & audit | ![Notify/Audit](docs/screenshots/seq-06-notify-audit.png) |
+Sequence diagrams from the report summarise collaboration for core use cases.
 
-**Giao tiếp:** nghiệp vụ chính **đồng bộ REST**; thông báo/audit **bất đồng bộ Outbox → Kafka**.
+**UC-01 — Customer management**
+
+![Sequence: customers](docs/screenshots/seq-01-customers.png)
+
+**UC-02 — Contract lifecycle**
+
+![Sequence: contracts](docs/screenshots/seq-02-contracts.png)
+
+**UC-04 — Price list management**
+
+![Sequence: pricing](docs/screenshots/seq-03-pricing.png)
+
+**UC-05 / UC-06 — Billing generation**
+
+![Sequence: billing](docs/screenshots/seq-04-billing.png)
+
+**UC-08 — Asynchronous e-signing**
+
+![Sequence: e-sign](docs/screenshots/seq-05-esign.png)
+
+**UC-09 / UC-10 — Notification and audit**
+
+![Sequence: notify and audit](docs/screenshots/seq-06-notify-audit.png)
+
+Communication summary: request-scoped business orchestration uses synchronous HTTP; notification and audit side effects use the transactional outbox and Kafka consumers.
 
 ---
 
-## Team & phân công
+## 6. Team structure
 
-Chi tiết: [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md)
+Ownership details: [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md).
 
-| Thành viên | MSSV | Trách nhiệm |
-|------------|------|-------------|
-| **Nguyen The Hien** | 22127107 | **Phụ trách chính** — Gateway, Contract, `udpt_common`, infra, FE core |
-| **Bui Le Khoi** | 22127205 | **Phụ trách chính** — Billing, Workflow, FE billing/approvals |
-| **Le Quang Tan** | 22127378 | Pricing, Operation, Notification, E-Sign + FE tương ứng |
-| **Nguyen Minh Hieu** | 21127742 | *Phạm vi thu hẹp* — Audit service + trang Audit |
+| Member | Student ID | Primary ownership |
+|--------|------------|-------------------|
+| Nguyen The Hien | 22127107 | Lead — API Gateway, Contract Service, shared library, infrastructure, frontend core |
+| Bui Le Khoi | 22127205 | Lead — Billing Service, Workflow Service, billing and approvals UI |
+| Le Quang Tan | 22127378 | Pricing, Operation, Notification, E-Sign services and related UI |
+| Nguyen Minh Hieu | 21127742 | Audit Service and audit administration UI |
 
 ---
 
-## Quick Start
+## 7. Reproduction
 
-### Yêu cầu
+### Prerequisites
 
-Docker Desktop · (tuỳ chọn) Node 20+ / Python 3.11+
+Docker Desktop. Optional: Node.js 20+, Python 3.11+.
 
-### Chạy full stack
+### Run the stack
 
 ```bash
 git clone https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS.git
@@ -193,75 +229,69 @@ cp .env.example .env
 make up
 ```
 
-Đợi ~30–60 giây cho Postgres/Kafka healthy.
+Allow approximately 30–60 seconds for PostgreSQL and Kafka readiness probes.
 
-| URL | Mô tả |
-|-----|--------|
-| http://localhost:5173 | **Frontend** |
-| http://localhost:8080/docs | API Gateway Swagger |
-| http://localhost:8001/docs | Contract Service Swagger |
+| Endpoint | Purpose |
+|----------|---------|
+| http://localhost:5173 | Operator portal |
+| http://localhost:8080/docs | API Gateway OpenAPI |
+| http://localhost:8001/docs | Contract Service OpenAPI |
 
-Dừng: `make down` (giữ volume/data).
+Stop containers without deleting volumes: `make down`.
+
+### Demo accounts
+
+Password equals username for all accounts.
+
+| Username | Role | Typical surfaces |
+|----------|------|------------------|
+| `sale01` | SALES_STAFF | Customers, contracts, pricing, approvals |
+| `sale02` | SALES_STAFF | Same role; used to demonstrate assignee-user denial |
+| `manager01` | SALES_MANAGER | Manager approval step |
+| `legal01` | LEGAL | Legal review |
+| `ops01` | OPERATIONS | Volumes and periods |
+| `account01` | ACCOUNTING | Billing, e-sign, accounting approval |
+| `director01` | DIRECTOR | Final approval and audit |
+| `admin01` | ADMIN | Full access and admin console |
+
+Authorisation is enforced in the UI (`frontend/src/config/rbac.ts`) and again at the gateway (`SERVICE_ROLE_REQUIREMENTS`).
+
+### Suggested walkthrough
+
+1. Sign in as `sale01` — dashboard, exceptions, contract submit.  
+2. Sign in as `manager01` / `legal01` — approval inbox.  
+3. Sign in as `ops01` — lock volumes; as `account01` — generate billing.  
+4. Sign in as `director01` — audit log.  
 
 ---
 
-## Tài khoản demo
+## 8. Evaluation scenarios
 
-Password = **username**.
-
-| User | Role | Menu chính |
-|------|------|------------|
-| `sale01` | SALES_STAFF | KH, HĐ, Bảng giá, Approvals |
-| `sale02` | SALES_STAFF | Demo APR-01 (không phải assignee) |
-| `manager01` | SALES_MANAGER | Duyệt Manager |
-| `legal01` | LEGAL | HĐ, Approvals |
-| `ops01` | OPERATIONS | Volumes |
-| `account01` | ACCOUNTING | Billing, E-sign, Approvals |
-| `director01` | DIRECTOR | Oversight + Audit |
-| `admin01` | ADMIN | Full + Admin |
-
-RBAC: sidebar + route guard (FE) + gateway API (BE).
-
----
-
-## Testing
+With the stack running:
 
 ```bash
-make up
 pip install -e ".[test]"
 pytest backend/tests -v
 ```
 
-Integration scenarios **SC-01 → SC-10** trong `backend/tests/integration/test_scenarios.py` (seed: `config/seed_data.json`).
+Integration cases SC-01 through SC-10 live in `backend/tests/integration/test_scenarios.py`, with seed data in `config/seed_data.json`. Continuous integration performs static Python compilation checks on every push to `main` (see `.github/workflows/ci.yml`). Full scenario tests require a live Docker Compose environment.
 
 ---
 
-## Tài liệu
+## 9. References
 
-| Tài liệu | Nội dung |
-|----------|----------|
-| [docs/UDPT-09-Report.pdf](docs/UDPT-09-Report.pdf) | **Báo cáo đồ án** |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Thiết kế hệ thống |
-| [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md) | UC → folder → API |
-| [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md) | Phân công nhóm |
-| [docs/QTKD_DATH.pdf](docs/QTKD_DATH.pdf) | Đề bài |
-| [docs/UDPT.pdf](docs/UDPT.pdf) | Tài liệu môn |
-| [docs/Data sample.pdf](docs/Data%20sample.pdf) | Dữ liệu mẫu |
-| [config/state_machines.json](config/state_machines.json) | State machines |
-| [config/workflow_definitions.json](config/workflow_definitions.json) | Workflow templates |
-
----
-
-## Demo flow gợi ý
-
-1. `sale01` → Dashboard / Exceptions → Contract → Submit  
-2. `manager01` / `legal01` → Approvals  
-3. `ops01` → Volumes; `account01` → Billing  
-4. `director01` → Audit  
-5. Toggle Dark mode + VI/EN  
+| Document | Description |
+|----------|-------------|
+| [docs/UDPT-09-Report.pdf](docs/UDPT-09-Report.pdf) | Formal project report |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Design principles and request flow |
+| [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md) | Use case to folder and API mapping |
+| [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md) | Module ownership |
+| [docs/QTKD_DATH.pdf](docs/QTKD_DATH.pdf) | Assignment specification |
+| [docs/UDPT.pdf](docs/UDPT.pdf) | Course material |
+| [docs/Data sample.pdf](docs/Data%20sample.pdf) | Sample commercial data |
+| [config/state_machines.json](config/state_machines.json) | Entity state machines |
+| [config/workflow_definitions.json](config/workflow_definitions.json) | Approval workflow templates |
 
 ---
 
-<p align="center">
-  <sub>Logistics ABC Corporation · Ứng dụng phân tán (UDPT) · 2026</sub>
-</p>
+Logistics ABC Corporation · Distributed Applications (UDPT) · Academic demonstration, 2026
