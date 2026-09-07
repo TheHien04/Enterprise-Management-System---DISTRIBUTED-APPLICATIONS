@@ -49,7 +49,7 @@ Tài liệu này mô tả **ai làm gì**, **folder nào**, **deliverable bảo 
 |------|----------|
 | `config/state_machines.json` | Contract, appendix — review chung team |
 | `config/seed_data.json` | Khách hàng, HĐ demo, SC liên quan contract |
-| `README.md`, `docs/ARCHITECTURE.md`, `docs/DEMO.md`, `docs/DEFENSE_GUIDE.md` | Tài liệu tổng & bảo vệ |
+| `README.md`, `docs/ARCHITECTURE.md`, `docs/SERVICE_MAP.md` | Tài liệu tổng |
 
 ### Deliverable khi bảo vệ (Hien nói)
 
@@ -208,7 +208,7 @@ SC-06 (esign), SC-07 (notification health) — phối hợp Khoi/Hien khi cần
 | Audit | **Hieu** |
 | `config/*.json` | Owner UC + **Hien** |
 
-Chi tiết Git: [CONTRIBUTING.md](../CONTRIBUTING.md) · Bản đồ file: [SERVICE_MAP.md](./SERVICE_MAP.md)
+Bản đồ file: [SERVICE_MAP.md](./SERVICE_MAP.md) · Kiến trúc: [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 

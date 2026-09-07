@@ -39,3 +39,6 @@ frontend/.vite/
 
 # OS
 Thumbs.db
+
+# Local submission packages (do not push)
+*.zip
