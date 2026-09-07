@@ -33,6 +33,7 @@ htmlcov/
 # Frontend
 frontend/dist/
 frontend/.vite/
+frontend/tsconfig.tsbuildinfo
 
 # Docker
 *.pid
