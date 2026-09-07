@@ -5,7 +5,6 @@ from udpt_common.audit_helper import log_audit
 from udpt_common.exceptions import NotFoundError, ValidationError
 
 from app.core.config import settings
-
 from app.domain.enums import SigningStatus
 from app.models.entities import SigningSession
 from app.repositories.signing_session_repo import SigningSessionRepository

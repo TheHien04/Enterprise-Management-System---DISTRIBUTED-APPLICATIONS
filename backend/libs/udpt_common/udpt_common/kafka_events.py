@@ -32,7 +32,8 @@ async def publish_domain_event(event_type: str, payload: dict[str, Any], bootstr
 
 async def count_pending_outbox(session_factory, OutboxEvent) -> int:
     """Count PENDING outbox rows (for SC-07 / health checks)."""
-    from sqlalchemy import func as sqlfunc, select
+    from sqlalchemy import func as sqlfunc
+    from sqlalchemy import select
 
     async with session_factory() as session:
         result = await session.scalar(

@@ -3,7 +3,11 @@ from datetime import date
 from udpt_common.config_loader import load_json_config
 
 from app.models.entities import Contract, ContractAppendix, ContractAttachment, Customer
-from app.repositories.customer_repo import AppendixRepository, ContractRepository, CustomerRepository
+from app.repositories.customer_repo import (
+    AppendixRepository,
+    ContractRepository,
+    CustomerRepository,
+)
 
 
 async def seed_demo_data(session):

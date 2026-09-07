@@ -2,13 +2,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from udpt_common.deps import RequestUser, get_request_user
 from udpt_common.responses import SuccessResponse
 
 from app.core.config import settings
 from app.core.deps import get_db
 from app.repositories.customer_repo import CustomerRepository
-from app.core.config import settings
 from app.schemas.customer import CustomerCreate, CustomerOut, CustomerOverview, CustomerUpdate
 from app.services.customer_service import CustomerService
 

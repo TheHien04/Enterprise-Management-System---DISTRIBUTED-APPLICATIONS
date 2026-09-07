@@ -5,18 +5,14 @@ from __future__ import annotations
 import asyncio
 import uuid
 
-import httpx
 import pytest
 
 from backend.tests.conftest import (
-    activate_due_contracts,
     add_contract_attachment,
-    approve_contract_fully,
     approve_workflow,
     auth_headers,
     ensure_active_contract,
     ensure_billing_period,
-    get_contract_by_code,
     lock_billing_period,
     submit_contract,
 )

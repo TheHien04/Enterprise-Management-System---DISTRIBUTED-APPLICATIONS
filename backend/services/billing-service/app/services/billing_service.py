@@ -7,7 +7,7 @@ from uuid import UUID
 import httpx
 from udpt_common.audit_helper import log_audit
 from udpt_common.config_loader import load_json_config
-from udpt_common.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from udpt_common.exceptions import ConflictError, NotFoundError, ValidationError
 
 from app.core.config import settings
 from app.domain.state_registry import (
@@ -368,7 +368,7 @@ class BillingSheetService:
             raise ValidationError(f"Contract {contract_code} is not valid for billing (PAY-01)")
         effective_to = date.fromisoformat(str(match["effective_to"]))
         if effective_to < period_end:
-            raise ValidationError(f"Contract expired before billing period (PAY-01)")
+            raise ValidationError("Contract expired before billing period (PAY-01)")
 
     async def _assert_period_reconciled(self, period: str):
         async with httpx.AsyncClient(timeout=15.0) as client:

@@ -76,7 +76,8 @@ async def root_health():
 
 @app.get("/health/outbox", tags=["Health"])
 async def outbox_health():
-    from sqlalchemy import func as sqlfunc, select
+    from sqlalchemy import func as sqlfunc
+    from sqlalchemy import select
 
     async with SessionLocal() as session:
         pending = await session.scalar(

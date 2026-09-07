@@ -14,6 +14,7 @@ This repository is the implementation artefact for the **Distributed Application
 | Security policy | [SECURITY.md](SECURITY.md) |
 | License | [LICENSE](LICENSE) (MIT) |
 | Continuous integration | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
 | Remote repository | [GitHub](https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS) |
 
 ---
@@ -30,8 +31,9 @@ This repository is the implementation artefact for the **Distributed Application
 8. [Team structure](#8-team-structure)
 9. [Reproduction](#9-reproduction)
 10. [Evaluation scenarios](#10-evaluation-scenarios)
-11. [License](#11-license)
-12. [References](#12-references)
+11. [Quality gates](#11-quality-gates)
+12. [License](#12-license)
+13. [References](#13-references)
 
 ---
 
@@ -475,7 +477,30 @@ Integration cases SC-01 through SC-10 live in `backend/tests/integration/test_sc
 
 ---
 
-## 11. License
+## 11. Quality gates
+
+Every push and pull request to `main` runs GitHub Actions:
+
+| Gate | What it verifies |
+|------|------------------|
+| Python compile | Bytecode compile of gateway, shared library, services, and tests |
+| Ruff | Lint (`E`/`F`/`I`/`UP`) over the same trees |
+| Artefact checks | License, security/contributing docs, report PDF, Compose, workflow configs, frontend lockfile |
+| Frontend build | `npm ci` on Node 20 (pinned via `.nvmrc`) then `tsc` + Vite production build |
+
+Local equivalents:
+
+```bash
+python -m compileall -q backend/gateway backend/libs backend/services backend/tests
+pip install ruff && ruff check backend/gateway backend/libs backend/services backend/tests
+cd frontend && npm ci && npm run build
+```
+
+Dependency updates for Actions and npm are proposed monthly via Dependabot (`.github/dependabot.yml`).
+
+---
+
+## 12. License
 
 This software is released under the [MIT License](LICENSE). Copyright (c) 2026 Nguyen The Hien, Bui Le Khoi, Le Quang Tan, Nguyen Minh Hieu.
 
@@ -483,7 +508,7 @@ Course report PDFs and assignment materials under `docs/` remain academic artefa
 
 ---
 
-## 12. References
+## 13. References
 
 | Document | Description |
 |----------|-------------|
@@ -491,6 +516,7 @@ Course report PDFs and assignment materials under `docs/` remain academic artefa
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Design principles and request flow |
 | [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md) | Use case to folder and API mapping |
 | [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md) | Module ownership |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution workflow |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting |
 | [docs/QTKD_DATH.pdf](docs/QTKD_DATH.pdf) | Assignment specification |

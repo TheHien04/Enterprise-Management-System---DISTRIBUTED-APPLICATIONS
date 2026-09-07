@@ -6,17 +6,18 @@ import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Callable, Type
+from typing import Any
 
 from sqlalchemy import DateTime, Integer, String, func, select
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
 
 logger = logging.getLogger(__name__)
 
 
-def make_outbox_model(base: Type) -> Type:
+def make_outbox_model(base: type) -> type:
     """Factory: attach OutboxEvent to a service's declarative Base."""
 
     class OutboxEvent(base):  # type: ignore[misc, valid-type]
@@ -35,7 +36,7 @@ def make_outbox_model(base: Type) -> Type:
 
 async def enqueue_domain_event(
     session: AsyncSession,
-    OutboxEvent: Type,
+    OutboxEvent: type,
     event_type: str,
     payload: dict[str, Any],
 ) -> None:
@@ -44,7 +45,7 @@ async def enqueue_domain_event(
 
 async def relay_outbox_batch(
     session: AsyncSession,
-    OutboxEvent: Type,
+    OutboxEvent: type,
     bootstrap_servers: str,
     limit: int = 50,
 ) -> int:
@@ -71,7 +72,7 @@ async def relay_outbox_batch(
 
 async def run_outbox_relay_loop(
     session_factory: async_sessionmaker[AsyncSession],
-    OutboxEvent: Type,
+    OutboxEvent: type,
     bootstrap_servers: str,
     interval_seconds: float = 2.0,
     stop_event: asyncio.Event | None = None,
@@ -92,7 +93,7 @@ async def run_outbox_relay_loop(
 
 def start_outbox_relay(
     session_factory: async_sessionmaker[AsyncSession],
-    OutboxEvent: Type,
+    OutboxEvent: type,
     bootstrap_servers: str,
     interval_seconds: float = 2.0,
 ) -> tuple[asyncio.Task, asyncio.Event]:

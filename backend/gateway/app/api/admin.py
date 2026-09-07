@@ -1,10 +1,7 @@
-import httpx
-import redis.asyncio as redis
 from fastapi import APIRouter, Depends, HTTPException
 from udpt_common.config_loader import load_json_config
 
 from app.api.auth import DEMO_USERS
-from app.core.config import settings
 from app.core.deps import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])

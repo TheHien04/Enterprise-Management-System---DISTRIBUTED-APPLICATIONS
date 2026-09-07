@@ -1,15 +1,18 @@
-import httpx
 from datetime import date
 
+import httpx
 from udpt_common.audit_helper import log_audit
-from udpt_common.config_loader import load_json_config
 from udpt_common.deps import RequestUser
-from udpt_common.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from udpt_common.exceptions import ConflictError, NotFoundError, ValidationError
 
 from app.core.config import settings
 from app.domain.state_registry import get_appendix_state_machine, get_contract_state_machine
 from app.models.entities import Contract, ContractAppendix, Customer
-from app.repositories.customer_repo import AppendixRepository, ContractRepository, CustomerRepository
+from app.repositories.customer_repo import (
+    AppendixRepository,
+    ContractRepository,
+    CustomerRepository,
+)
 from app.schemas.customer import (
     AppendixCreate,
     ContractCreate,

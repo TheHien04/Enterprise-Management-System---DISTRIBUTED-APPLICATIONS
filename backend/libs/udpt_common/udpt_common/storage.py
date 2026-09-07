@@ -3,7 +3,6 @@ import uuid
 from functools import lru_cache
 
 from minio import Minio
-from minio.error import S3Error
 
 
 @lru_cache

@@ -5,14 +5,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from udpt_common.deps import RequestUser, get_request_user
 from udpt_common.responses import SuccessResponse
 
-from app.core.deps import get_db
-from app.repositories.customer_repo import AppendixRepository, ContractRepository, CustomerRepository
 from app.core.config import settings
+from app.core.deps import get_db
+from app.repositories.customer_repo import (
+    AppendixRepository,
+    ContractRepository,
+    CustomerRepository,
+)
 from app.schemas.customer import (
     AppendixCreate,
     AppendixOut,
-    ContractCreate,
     AttachmentCreate,
+    ContractCreate,
     ContractExtendRequest,
     ContractOut,
     ContractUpdate,
@@ -119,8 +123,9 @@ async def add_attachment(
     payload: AttachmentCreate,
     session: AsyncSession = Depends(get_db),
 ):
-    from app.models.entities import ContractAttachment
     from udpt_common.storage import upload_demo_file
+
+    from app.models.entities import ContractAttachment
 
     contract = await ContractRepository(session).get_by_id(contract_id)
     if not contract:
@@ -160,8 +165,9 @@ async def upload_attachment_file(
     session: AsyncSession = Depends(get_db),
     file: UploadFile = File(...),
 ):
-    from app.models.entities import ContractAttachment
     from udpt_common.storage import upload_demo_file
+
+    from app.models.entities import ContractAttachment
 
     contract = await ContractRepository(session).get_by_id(contract_id)
     if not contract:

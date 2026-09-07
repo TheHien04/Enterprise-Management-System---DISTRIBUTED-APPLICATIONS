@@ -7,7 +7,12 @@ from udpt_common.responses import SuccessResponse
 
 from app.core.deps import get_db
 from app.repositories.workflow_repo import WorkflowRepository
-from app.schemas.workflow import WorkflowActionRequest, WorkflowOut, WorkflowProgress, WorkflowStartRequest
+from app.schemas.workflow import (
+    WorkflowActionRequest,
+    WorkflowOut,
+    WorkflowProgress,
+    WorkflowStartRequest,
+)
 from app.services.workflow_engine import WorkflowEngine
 
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
@@ -29,7 +34,8 @@ async def start_workflow(
 
 @router.get("/outbox/stats", response_model=SuccessResponse[dict])
 async def outbox_stats(session: AsyncSession = Depends(get_db)):
-    from sqlalchemy import func as sqlfunc, select
+    from sqlalchemy import func as sqlfunc
+    from sqlalchemy import select
 
     from app.db.base import OutboxEvent
 

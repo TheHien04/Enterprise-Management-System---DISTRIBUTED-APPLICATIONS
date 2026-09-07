@@ -1,14 +1,15 @@
 from datetime import date
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from udpt_common.deps import RequestUser, get_request_user
 from udpt_common.responses import SuccessResponse
 
 from app.core.deps import get_db
-from app.repositories.customer_repo import AppendixRepository, ContractRepository, CustomerRepository
+from app.repositories.customer_repo import (
+    AppendixRepository,
+    ContractRepository,
+    CustomerRepository,
+)
 from app.schemas.customer import AppendixOut, WorkflowStatusCallback
 from app.services.customer_service import AppendixService, ContractService
 
@@ -44,7 +45,6 @@ async def workflow_status_callback(
             message="Contract status synced from workflow",
         )
     if payload.document_type == "APPENDIX":
-        from uuid import UUID
 
         appendix = await AppendixService(
             AppendixRepository(session), ContractRepository(session)
