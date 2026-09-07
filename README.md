@@ -10,6 +10,10 @@ This repository is the implementation artefact for the **Distributed Application
 | Architecture notes | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Service / UC map | [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md) |
 | Team ownership | [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Security policy | [SECURITY.md](SECURITY.md) |
+| License | [LICENSE](LICENSE) (MIT) |
+| Continuous integration | [.github/workflows/ci.yml](.github/workflows/ci.yml) |
 | Remote repository | [GitHub](https://github.com/TheHien04/Enterprise-Management-System---DISTRIBUTED-APPLICATIONS) |
 
 ---
@@ -26,7 +30,8 @@ This repository is the implementation artefact for the **Distributed Application
 8. [Team structure](#8-team-structure)
 9. [Reproduction](#9-reproduction)
 10. [Evaluation scenarios](#10-evaluation-scenarios)
-11. [References](#11-references)
+11. [License](#11-license)
+12. [References](#12-references)
 
 ---
 
@@ -470,7 +475,15 @@ Integration cases SC-01 through SC-10 live in `backend/tests/integration/test_sc
 
 ---
 
-## 11. References
+## 11. License
+
+This software is released under the [MIT License](LICENSE). Copyright (c) 2026 Nguyen The Hien, Bui Le Khoi, Le Quang Tan, Nguyen Minh Hieu.
+
+Course report PDFs and assignment materials under `docs/` remain academic artefacts of the UDPT coursework and are distributed with the repository for evaluation purposes.
+
+---
+
+## 12. References
 
 | Document | Description |
 |----------|-------------|
@@ -478,6 +491,8 @@ Integration cases SC-01 through SC-10 live in `backend/tests/integration/test_sc
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Design principles and request flow |
 | [docs/SERVICE_MAP.md](docs/SERVICE_MAP.md) | Use case to folder and API mapping |
 | [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md) | Module ownership |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution workflow |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
 | [docs/QTKD_DATH.pdf](docs/QTKD_DATH.pdf) | Assignment specification |
 | [docs/UDPT.pdf](docs/UDPT.pdf) | Course material |
 | [docs/Data sample.pdf](docs/Data%20sample.pdf) | Sample commercial data |
