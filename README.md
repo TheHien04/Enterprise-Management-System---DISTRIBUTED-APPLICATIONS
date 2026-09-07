@@ -17,14 +17,16 @@ This repository is the implementation artefact for the **Distributed Application
 ## Contents
 
 1. [Research context](#1-research-context)
-2. [System capabilities](#2-system-capabilities)
-3. [Distributed architecture](#3-distributed-architecture)
-4. [Operator interface](#4-operator-interface)
-5. [Inter-service interaction patterns](#5-inter-service-interaction-patterns)
-6. [Team structure](#6-team-structure)
-7. [Reproduction](#7-reproduction)
-8. [Evaluation scenarios](#8-evaluation-scenarios)
-9. [References](#9-references)
+2. [Technology stack](#2-technology-stack)
+3. [System capabilities](#3-system-capabilities)
+4. [Distributed architecture](#4-distributed-architecture)
+5. [Communication and consistency model](#5-communication-and-consistency-model)
+6. [Operator interface](#6-operator-interface)
+7. [Inter-service interaction patterns](#7-inter-service-interaction-patterns)
+8. [Team structure](#8-team-structure)
+9. [Reproduction](#9-reproduction)
+10. [Evaluation scenarios](#10-evaluation-scenarios)
+11. [References](#11-references)
 
 ---
 
@@ -42,7 +44,86 @@ The implementation is intentionally a course-scale demonstration: production con
 
 ---
 
-## 2. System capabilities
+## 2. Technology stack
+
+### 2.1 Layered view
+
+```mermaid
+flowchart TB
+  subgraph Presentation["Presentation layer"]
+    FE["React 18 + TypeScript + Vite<br/>Operator portal :5173"]
+  end
+
+  subgraph Edge["Edge layer"]
+    GW["API Gateway FastAPI :8080<br/>JWT · RBAC · rate limit · idempotency"]
+  end
+
+  subgraph Domain["Domain microservices — FastAPI + SQLAlchemy async"]
+    CS["Contract :8001"]
+    PS["Pricing :8002"]
+    OS["Operation :8003"]
+    BS["Billing :8004"]
+    WS["Workflow :8005"]
+    NS["Notification :8006"]
+    AS["Audit :8007"]
+    ES["E-Sign :8008"]
+  end
+
+  subgraph Data["Data and messaging"]
+    PG["PostgreSQL 16<br/>database-per-service"]
+    RD["Redis 7<br/>rate limit · idempotency cache"]
+    KF["Apache Kafka<br/>domain events"]
+    MN["MinIO<br/>contract attachments"]
+  end
+
+  subgraph Delivery["Delivery"]
+    DC["Docker Compose"]
+    K8["Kubernetes manifests"]
+  end
+
+  FE --> GW
+  GW --> CS & PS & OS & BS & WS & NS & AS & ES
+  CS & PS & OS & BS & WS --> PG
+  NS & AS & ES --> PG
+  GW --> RD
+  WS -. outbox relay .-> KF
+  KF --> NS & AS
+  CS --> MN
+  DC --- GW
+  K8 --- GW
+```
+
+### 2.2 Stack catalogue
+
+| Layer | Technology | Role in the system |
+|-------|------------|--------------------|
+| Client | React, TypeScript, Vite | Role-based operator UI, i18n (EN/VI), light/dark theme |
+| Edge | FastAPI API Gateway | Single public entry; JWT; RBAC; Redis rate limit and idempotency |
+| Services | FastAPI, Pydantic, SQLAlchemy (async), httpx | Eight bounded-context APIs |
+| Shared library | `udpt_common` | State machine, outbox, auth helpers, Kafka utilities |
+| Configuration | JSON (`state_machines`, `workflow_definitions`, `seed_data`) | Declarative lifecycle and approval templates |
+| Relational store | PostgreSQL 16 | Six logical databases (`contract_db` … `support_db`) |
+| Cache | Redis 7 | Gateway throttling and idempotent response replay |
+| Messaging | Kafka (+ ZooKeeper) | Asynchronous notification and audit fan-out |
+| Object storage | MinIO | Contract attachment objects |
+| Runtime | Docker Compose; optional Kubernetes | Local and cluster deployment |
+| Verification | pytest, httpx, SC-01–SC-10 | Integration scenarios against a live stack |
+
+### 2.3 Language and runtime summary
+
+| Area | Choice |
+|------|--------|
+| Backend language | Python 3.11+ |
+| Backend framework | FastAPI (ASGI / Uvicorn) |
+| Frontend language | TypeScript |
+| Frontend framework | React 18 |
+| Build tooling | Vite |
+| Inter-service calls | HTTP/REST (sync), Kafka events (async) |
+| Auth token | JWT (HS256) issued by the gateway |
+
+---
+
+## 3. System capabilities
 
 | ID | Capability | Status |
 |----|------------|--------|
@@ -61,26 +142,66 @@ Representative business rules exercised by integration scenarios SC-01–SC-10 i
 
 ---
 
-## 3. Distributed architecture
+## 4. Distributed architecture
 
+### 4.1 System context
+
+```mermaid
+flowchart LR
+  U["Enterprise operators<br/>Sales · Legal · Ops · Accounting · Director"]
+
+  subgraph Portal["Web portal"]
+    UI["React SPA :5173"]
+  end
+
+  subgraph Platform["UDPT platform"]
+    GW["API Gateway :8080"]
+    subgraph Services["Microservices"]
+      C["Contract"]
+      P["Pricing"]
+      O["Operation"]
+      B["Billing"]
+      W["Workflow"]
+      N["Notification"]
+      A["Audit"]
+      E["E-Sign"]
+    end
+  end
+
+  U --> UI --> GW
+  GW --> C & P & O & B & W & N & A & E
 ```
-Client (React :5173)
-        |
-        |  HTTP + Bearer JWT
-        v
-API Gateway (:8080)
-  JWT · RBAC · rate limit · idempotency · reverse proxy
-        |
-        +-- Contract (:8001)     -> contract_db
-        +-- Pricing (:8002)      -> pricing_db
-        +-- Operation (:8003)    -> operation_db
-        +-- Billing (:8004)      -> billing_db
-        +-- Workflow (:8005)     -> workflow_db
-        +-- Notification (:8006) -> support_db
-        +-- Audit (:8007)        -> support_db
-        +-- E-Sign (:8008)       -> support_db
-        |
-        +-- PostgreSQL · Redis · Kafka · MinIO
+
+### 4.2 Service topology and persistence
+
+```mermaid
+flowchart TB
+  GW["API Gateway"]
+
+  GW --> C["Contract Service<br/>:8001"]
+  GW --> P["Pricing Service<br/>:8002"]
+  GW --> O["Operation Service<br/>:8003"]
+  GW --> B["Billing Service<br/>:8004"]
+  GW --> W["Workflow Service<br/>:8005"]
+  GW --> N["Notification Service<br/>:8006"]
+  GW --> A["Audit Service<br/>:8007"]
+  GW --> E["E-Sign Service<br/>:8008"]
+
+  C --- CD[(contract_db)]
+  P --- PD[(pricing_db)]
+  O --- OD[(operation_db)]
+  B --- BD[(billing_db)]
+  W --- WD[(workflow_db)]
+  N --- SD[(support_db)]
+  A --- SD
+  E --- SD
+
+  C -. REST start .-> W
+  W -. REST callback .-> C
+  B -. REST read .-> C & P & O
+  W -. outbox .-> K[[Kafka]]
+  K --> N
+  K --> A
 ```
 
 | Component | Port | Persistence | Responsibility |
@@ -101,67 +222,140 @@ Logical database layout (database-per-service):
 
 Gateway configuration maps public paths under `/api/v1/{service}/...` to container hostnames such as `http://contract-service:8001`. Browser clients use only `http://localhost:8080`.
 
+### 4.3 Contract approval chain (config-driven)
+
+```mermaid
+stateDiagram-v2
+  [*] --> DRAFT
+  DRAFT --> UNDER_REVIEW: Submit + start workflow
+  UNDER_REVIEW --> APPROVED: All five steps approved
+  UNDER_REVIEW --> REJECTED: Reject
+  UNDER_REVIEW --> REVISION_REQUESTED: Request revision
+  REVISION_REQUESTED --> DRAFT: Edit and resubmit
+  APPROVED --> ACTIVE: effective_from reached
+  ACTIVE --> EXPIRED: effective_to passed
+  REJECTED --> [*]
+  EXPIRED --> [*]
+```
+
+```mermaid
+sequenceDiagram
+  participant Sale as Sales Staff
+  participant Mgr as Sales Manager
+  participant Legal as Legal
+  participant Acc as Accounting
+  participant Dir as Director
+
+  Note over Sale,Dir: CONTRACT workflow_definitions.json
+  Sale->>Mgr: Step 1 approved
+  Mgr->>Legal: Step 2 approved
+  Legal->>Acc: Step 3 approved
+  Acc->>Dir: Step 4 approved
+  Dir-->>Sale: Step 5 approved — document ACTIVE
+```
+
 ---
 
-## 4. Operator interface
+## 5. Communication and consistency model
+
+### 5.1 Synchronous path (business request)
+
+```mermaid
+sequenceDiagram
+  participant FE as React client
+  participant GW as API Gateway
+  participant Svc as Domain service
+  participant DB as Service database
+
+  FE->>GW: HTTPS + Bearer JWT
+  GW->>GW: Validate JWT, RBAC, rate limit
+  GW->>Svc: Proxy + X-User-Id, X-User-Roles
+  Svc->>DB: Persist in owned schema only
+  Svc-->>GW: JSON response
+  GW-->>FE: JSON response
+```
+
+### 5.2 Asynchronous path (outbox to Kafka)
+
+```mermaid
+sequenceDiagram
+  participant Svc as Workflow / domain service
+  participant DB as Service DB + outbox_events
+  participant Relay as Outbox relay
+  participant K as Kafka
+  participant N as Notification
+  participant A as Audit
+
+  Svc->>DB: Same transaction — business row + outbox PENDING
+  Relay->>DB: Poll PENDING
+  Relay->>K: Publish domain event
+  K->>N: Consume — create notification
+  K->>A: Consume — append audit log
+```
+
+**Summary:** request-scoped orchestration is strongly consistent within a service database; notifications and audit are eventually consistent via the transactional outbox.
+
+---
+
+## 6. Operator interface
 
 The React portal follows a dense enterprise (PortOps-inspired) layout with role-based navigation, bilingual copy (English / Vietnamese), and light/dark themes. Screenshots below are taken from the project report.
 
-### 4.1 Authentication (M01)
+### 6.1 Authentication (M01)
 
 Centralised login issues a JWT carrying subject and roles. Demo credentials use `password = username` for classroom reproduction.
 
 ![Login](docs/screenshots/ui-01-login.png)
 
-### 4.2 Dashboard (M02)
+### 6.2 Dashboard (M02)
 
 Role-conditioned control tower: pending approvals, exception counts, draft contracts, expiry warnings within thirty days, and guided end-to-end flow steps.
 
 ![Dashboard](docs/screenshots/ui-02-dashboard.png)
 
-### 4.3 Customers (UC-01 / M03)
+### 6.3 Customers (UC-01 / M03)
 
 Customer master registration, directory search, and suspend actions. Only `ACTIVE` customers may be referenced when submitting contracts.
 
 ![Customers](docs/screenshots/ui-03-customers.png)
 
-### 4.4 Contracts (UC-02 / M04)
+### 6.4 Contracts (UC-02 / M04)
 
 Contract list and detail with lifecycle pipeline (`DRAFT` to `ACTIVE`), mandatory attachments before submit, workflow progress, and entity activity timeline.
 
 ![Contracts](docs/screenshots/ui-04-contracts.png)
 
-### 4.5 Price lists (UC-04 / M05)
+### 6.5 Price lists (UC-04 / M05)
 
 Versioned effective periods, overlap validation, supersede of prior effective lists, and version comparison.
 
 ![Price lists](docs/screenshots/ui-05-price-lists.png)
 
-### 4.6 Volumes and periods (UC-05 / M06)
+### 6.6 Volumes and periods (UC-05 / M06)
 
 Period states `OPEN` → `RECONCILED` → `LOCKED`. Quantity updates are rejected after lock; locked volumes feed billing generation.
 
 ![Volumes](docs/screenshots/ui-06-volumes.png)
 
-### 4.7 Billing (UC-06 / M07)
+### 6.7 Billing (UC-06 / M07)
 
 Wizard over Draft → Calculate → Reconcile → Submit. Billing aggregates volumes and prices via inter-service REST calls, persists `snapshot_unit_price`, supports statement print/export, and triggers e-sign.
 
 ![Billing](docs/screenshots/ui-07-billing.png)
 
-### 4.8 Approval inbox (UC-07 / M08)
+### 6.8 Approval inbox (UC-07 / M08)
 
 Inbox filtered by assignee role and assignee user. Actions: approve, reject, request revision (comment required). Optimistic concurrency uses workflow `version`.
 
 ![Approvals](docs/screenshots/ui-08-approvals.png)
 
-### 4.9 Notifications (UC-09 / M09)
+### 6.9 Notifications (UC-09 / M09)
 
-Asynchronous notifications delivered through the outbox–Kafka pipeline; unread badges and mark-as-read semantics in the portal.
+Asynchronous notifications delivered through the outbox–Kafka pipeline; unread indicators and mark-as-read semantics in the portal.
 
 ![Notifications](docs/screenshots/ui-09-notifications.png)
 
-### 4.10 Audit (UC-10 / M10)
+### 6.10 Audit (UC-10 / M10)
 
 Immutable audit query UI for director/admin roles. Scoped entity timelines are available on contract and billing detail views for operational roles.
 
@@ -169,7 +363,7 @@ Immutable audit query UI for director/admin roles. Scoped entity timelines are a
 
 ---
 
-## 5. Inter-service interaction patterns
+## 7. Inter-service interaction patterns
 
 Sequence diagrams from the report summarise collaboration for core use cases.
 
@@ -197,11 +391,9 @@ Sequence diagrams from the report summarise collaboration for core use cases.
 
 ![Sequence: notify and audit](docs/screenshots/seq-06-notify-audit.png)
 
-Communication summary: request-scoped business orchestration uses synchronous HTTP; notification and audit side effects use the transactional outbox and Kafka consumers.
-
 ---
 
-## 6. Team structure
+## 8. Team structure
 
 Ownership details: [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md).
 
@@ -214,7 +406,7 @@ Ownership details: [docs/TEAM_ASSIGNMENT.md](docs/TEAM_ASSIGNMENT.md).
 
 ---
 
-## 7. Reproduction
+## 9. Reproduction
 
 ### Prerequisites
 
@@ -265,7 +457,7 @@ Authorisation is enforced in the UI (`frontend/src/config/rbac.ts`) and again at
 
 ---
 
-## 8. Evaluation scenarios
+## 10. Evaluation scenarios
 
 With the stack running:
 
@@ -274,11 +466,11 @@ pip install -e ".[test]"
 pytest backend/tests -v
 ```
 
-Integration cases SC-01 through SC-10 live in `backend/tests/integration/test_scenarios.py`, with seed data in `config/seed_data.json`. Continuous integration performs static Python compilation checks on every push to `main` (see `.github/workflows/ci.yml`). Full scenario tests require a live Docker Compose environment.
+Integration cases SC-01 through SC-10 live in `backend/tests/integration/test_scenarios.py`, with seed data in `config/seed_data.json`.
 
 ---
 
-## 9. References
+## 11. References
 
 | Document | Description |
 |----------|-------------|
